@@ -62,18 +62,71 @@ ROS 2 lifecycle states are intentionally minimal and low‑level, while producti
 * Without centralized orchestration, mapping mission‑level behavior to coordinated lifecycle transitions across multiple nodes becomes **error‑prone and difficult to validate**, especially on low‑end SoCs where deterministic behavior is critical.
 > **💡 Summary**  
 > On low‑end embedded platforms, the Python‑based launch system introduces overhead and non‑determinism during boot and state transitions. **These limitations are structural and cannot be reliably mitigated through launch configuration alone**, motivating a native and deterministic lifecycle orchestration approach.
-# 3. Architecture & LifecycleManager
+## 3. Architecture & LifecycleManager - "Solution"
 
-To replace the 20+ Python scripts and uncoordinated nodes, the system was redesigned into a native C++ application composed of five core modules:
+### A Modular Solution for Complex Systems
 
-* **ConfigFileManager**: Centralizes node configuration and dependencies using YAML.
-* **LifecycleNodeManager**: Manages the low-level lifecycle of each ROS 2 Managed Node.
-* **StateTransitionEngine**: Executes multi-step transitions and handles error recovery/retries.
-* **ServiceBridge**: Provides a unified interface for the application layer.
-* **LifecycleMonitor**: Monitors node health and resource usage in real-time.
+The Lifecycle Manager is a multi-threaded C++ ROS 2 node that acts as a centralized lifecycle coordinator. It utilizes a specialized Dual-Thread Architecture:
+*   **Spin Thread:** Dedicated to handling ROS 2 communications and service callbacks.
+*   **Main Thread:** Manages the core orchestration loop, including package spawning and the `processQueue()` mechanism. This non-blocking queue ensures that state transition requests are serialized and processed deterministically.
+
+It operates alongside the standard ROS 2 launch infrastructure and is structured around five core modules:
+
+```mermaid
+flowchart TD
+    App["<b>APPLICATION LAYER</b><br/>(Requests device state changes)"]
+    YAML["<b>Configuration YAML</b><br/>(Source of Truth)"]
+
+    subgraph Manager ["LIFECYCLE MANAGER (Native C++)"]
+        direction TB
+        SL["Service Layer<br/>(Queue Manager)"]
+        Conf["Configuration<br/>(YAML Parser)"]
+        Core["Orchestration Core<br/>(Parallel spawning, state-machine tracking)"]
+        PL["Process Launcher<br/>(fork/exec/wait)"]
+        LC["Lifecycle Client<br/>(Service Interface)"]
+        
+        SL --- Core
+        Conf --- Core
+        Core --- PL
+        Core --- LC
+    end
+
+    subgraph Nodes ["MANAGED ROS 2 NODES"]
+        direction LR
+        NA["Node A"]
+        NB["Node B"]
+        NN["Node N"]
+    end
+
+    App -- "ROS 2 Service<br/>(/lifecycle_transition_device)" --> SL
+    YAML --> Conf
+    
+    PL -- "OS Signals (SIGCHLD)<br/>& Native Execution" --> Nodes
+    LC -- "ROS 2 standard<br/>GetState / ChangeState" --> Nodes
+
+    style App fill:#f9f9f9,stroke:#333,stroke-width:2px
+    style Manager fill:#e6e6e6,stroke:#333,stroke-width:2px
+    style Nodes fill:#e6e6e6,stroke:#333,stroke-width:2px
+    style SL fill:#fff,stroke:#333
+    style Conf fill:#fff,stroke:#333
+    style Core fill:#fff,stroke:#333
+    style PL fill:#fff,stroke:#333
+    style LC fill:#fff,stroke:#333
+    style YAML fill:#fff,stroke:#333,stroke-width:2px
+    style NA fill:#fff,stroke:#333
+    style NB fill:#fff,stroke:#333
+    style NN fill:#fff,stroke:#333
+```
+
+*   **Service Layer** – Exposes the `lifecycle_transition_device` ROS 2 service and manages a thread-safe work queue. A dedicated spin thread handles ROS 2 callbacks while the main thread processes queued transitions serially, ensuring deterministic execution and preventing race conditions.
+*   **Configuration Engine** – A centralized YAML file, loaded as ROS 2 node parameters, serves as the single source of truth for all package definitions, executable paths, dependency relationships, and per-device-state lifecycle mappings. Adding a new node requires only a YAML entry — no code changes.
+*   **Orchestration Core** – Implements parallel or sequential package startup based on YAML dependency graphs. Resolves executable paths dynamically at runtime using `ament_index_cpp` API, searching across standard ROS 2 directories (`lib/`, `bin/`, `share/`). This avoids fragile hardcoded paths while maintaining full workspace compatibility across different ROS 2 environments.
+*   **Process Launcher** – Handles native process spawning via POSIX `fork`/`exec` with `SIGCHLD` signal handling for child process reaping. Supports per-process I/O redirection and timestamped log file management for every boot session.
+*   **Lifecycle Client** – Wraps standard ROS 2 `GetState` and `ChangeState` service calls with configurable retry and timeout policies.
+
+**Architecture Independence** – By relying exclusively on POSIX standard system calls (`fork`, `execvp`, `sigaction`) and standard ROS 2 APIs, the Manager achieves 100% portability between ARM64 and x86_64 architectures. This ensures consistent behavioral deterministic across all development and deployment platforms.
 
 ### 📊 Architecture Comparison
-
 The following diagram illustrates the fundamental architectural shift from a heavy Python interpreter to our lightweight C++ native orchestrator.
 
 ```mermaid
@@ -103,26 +156,51 @@ flowchart TD
 ```
 
 ### ⚙️ YAML-Driven Configuration
-The system uses a declarative YAML approach to manage node groups and priorities. This replaces hardcoded Python logic with flexible, data-driven configuration:
+All orchestration behavior is defined declaratively in a single YAML file:
 
 ```yaml
-nodes:
-  - name: "lidar_driver"
-    package: "rplidar_ros"
-    priority: 10
-    managed: true
-  - name: "navigation_service"
-    package: "nav2_lifecycle_manager"
-    priority: 20
-    managed: true
-    dependencies: ["lidar_driver"]
+# Example: Adding a node to the system
+master_service:
+  executable: master_service
+  dependency: ["package_2,node_1"]  # Start only after this dependency is ACTIVE
+  device_state_1: ACTIVE             # Normal Operation
+  device_state_2: INACTIVE           # Standby Mode
 ```
 
+Key configuration capabilities:
+*   **Launch mode:** Selects between native binary spawning or script-based execution
+*   **Transition strategy:** Parallel (multi-threaded) or sequential execution
+*   **Dependency declaration:** Inter-node startup ordering
+*   **Device state mapping:** Per-node lifecycle targets for each robot mission state
+
 ### 🔁 Multi-Step Lifecycle State Machine
-The Lifecycle Manager simplifies complex ROS 2 lifecycle sequences into single-call transitions by resolving intermediate states automatically:
-* **`UNCONFIGURED ➔ ACTIVE`**: Automatically triggering `Configure ➔ Activate`
-* **`ACTIVE ➔ UNCONFIGURED`**: Automatically triggering `Deactivate ➔ Cleanup`
-* The explicit `TransitionEngine` handles execution semantics and timeout policies transparently under the hood.
+The ROS 2 lifecycle standard does not allow direct transitions between certain primary states. The Lifecycle Manager resolves all intermediate steps automatically:
+
+```text
+UNCONFIGURED ➔ ACTIVE     : Configure ➔ Activate  (two-step)
+ACTIVE ➔ UNCONFIGURED     : Deactivate ➔ Cleanup  (two-step)
+UNCONFIGURED ➔ INACTIVE   : Configure
+INACTIVE ➔ ACTIVE         : Activate
+ACTIVE ➔ INACTIVE         : Deactivate
+Any state ➔ FINALIZED     : Appropriate shutdown transition
+```
+The application layer simply declares a target state; the Lifecycle Manager resolves and executes all intermediate transitions transparently, each wrapped with configurable retry and timeout policies.
 
 ### 🤖 Device State Abstraction
-To bridge the gap between high-level robot missions and low-level node states, a **"Device State"** abstraction was introduced. This allows orchestrating massive state machines (e.g., "Cleaning mode", "Standby mode", "Shutdown") with a single service call, seamlessly aligning abstract robotic missions with low-level deterministic OS process transitions.
+To bridge the semantic gap between robot missions and low-level lifecycle states, the Lifecycle Manager introduces a "Device State" abstraction.
+
+| Node \ Device State | State 1 (Cleaning) | State 2 (Standby) | State 3 (Shutdown) |
+| :--- | :--- | :--- | :--- |
+| `navigation_service` | ACTIVE | INACTIVE | FINALIZED |
+| `lidar_driver` | ACTIVE | INACTIVE | FINALIZED |
+| `camera_driver` | ACTIVE | ACTIVE | FINALIZED |
+| `motor_controller` | ACTIVE | INACTIVE | FINALIZED |
+| `diagnostic_service` | ACTIVE | ACTIVE | FINALIZED |
+
+To switch the robot from "Cleaning" to "Standby", just call:
+
+```bash
+ros2 service call /lifecycle_transition_device lifecycle_manager_msgs/srv/TransitionDevice "{request: 2}"
+```
+
+This single call automatically transitions each node to its matching target state — navigation and motor stop, while camera and diagnostics stay running. This design completely decouples mission logic from lifecycle management.
