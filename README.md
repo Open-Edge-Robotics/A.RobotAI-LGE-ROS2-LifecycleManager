@@ -13,7 +13,6 @@ A C++ deterministic lifecycle orchestrator optimized for ROS 2 embedded systems.
 > The complete C++ source code is planned to be released under the Apache License 2.0
 > following internal compliance procedures.
 
-A production-grade, C++ deterministic lifecycle orchestrator optimized for resource-constrained ROS 2 embedded systems.
 ## 📑 Table of Contents
 1. [Overview - "What & Why?"](#1-overview---what--why)
 2. [Structural Pain Points in Production Systems](#2-structural-pain-points-in-production-systems)
@@ -39,7 +38,7 @@ To address these limitations, we implemented the **Deterministic Lifecycle Manag
 Key characteristics include:
 * **Zero Python dependency** on the target system
 * ROS 2 nodes built and executed as native C++ binaries
-* **Fast and Safe Concurrent Spawning:** Utilizes C++ threads alongside standard POSIX primitives (`fork()`, `execvp()`, `SIGCHLD`) to achieve true parallel execution without the CPU bottlenecks typical of Python.
+* **Fast and Safe Concurrent Spawning:** Utilizes C++ threads alongside standard POSIX primitives (`fork()`, `execvp()`, `SIGCHLD`) to achieve parallel execution suited for resource-constrained systems.
 This design preserves existing ROS 2 components—including DDS communication and lifecycle semantics—while eliminating the runtime overhead introduced by Python-based launch tooling.
 > **💡 Note:** Deterministic Lifecycle Manager is *not* a replacement for ROS 2. It is a focused orchestration layer that provides deterministic and resource-efficient boot and lifecycle management, specifically tailored for low-end embedded systems used in cost-constrained production robots.
 
@@ -213,6 +212,8 @@ This single call automatically transitions each node to its matching target stat
 The Lifecycle Manager follows a rigorous, deterministic sequence to ensure all nodes are prepared and synchronized.
 
 By identifying independent node groups at runtime from YAML dependency declarations, the system initializes multiple packages concurrently — reducing the theoretical boot time from **`O(N)`** sequential initialization to **`O(Depth(G))`**, where `Depth(G)` is the longest dependency path in the package graph.
+In other words, boot time becomes bounded by the longest dependency chain rather than the total number of nodes.
+
 
 ```mermaid
 flowchart TD
