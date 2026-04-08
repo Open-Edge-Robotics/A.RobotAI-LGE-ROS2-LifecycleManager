@@ -69,7 +69,7 @@ To replace the 20+ Python scripts and uncoordinated nodes, the system was redesi
 * **StateTransitionEngine:** Executes multi-step transitions and handles error recovery/retries.
 * **ServiceBridge:** Provides a unified interface for the application layer.
 * **LifecycleMonitor:** Monitors node health and resource usage in real-time.
-### 📊 Architecture Comparison
+## 📊 Architecture Comparison
 The following diagram illustrates the fundamental architectural shift from a heavy Python interpreter to our lightweight C++ native orchestrator.
 ```mermaid
 flowchart TD
