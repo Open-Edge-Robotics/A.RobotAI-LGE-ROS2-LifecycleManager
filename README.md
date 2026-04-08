@@ -42,6 +42,7 @@ Key characteristics include:
 * **Fast and Safe Concurrent Spawning:** Utilizes C++ threads alongside standard POSIX primitives (`fork()`, `execvp()`, `SIGCHLD`) to achieve true parallel execution without the CPU bottlenecks typical of Python.
 This design preserves existing ROS 2 components—including DDS communication and lifecycle semantics—while eliminating the runtime overhead introduced by Python-based launch tooling.
 > **💡 Note:** Deterministic Lifecycle Manager is *not* a replacement for ROS 2. It is a focused orchestration layer that provides deterministic and resource-efficient boot and lifecycle management, specifically tailored for low-end embedded systems used in cost-constrained production robots.
+
 ## 2. Why Python launch breaks on low-end SoCs - "Pain Point"
 ### Structural Pain Points in Production Systems
 This section explains why the standard Python‑based `ros2 launch` workflow becomes a reliability bottleneck on low‑end SoCs, based on issues repeatedly observed during production‑equivalent system integration.
@@ -62,6 +63,7 @@ ROS 2 lifecycle states are intentionally minimal and low‑level, while producti
 * Without centralized orchestration, mapping mission‑level behavior to coordinated lifecycle transitions across multiple nodes becomes **error‑prone and difficult to validate**, especially on low‑end SoCs where deterministic behavior is critical.
 > **💡 Summary**  
 > On low‑end embedded platforms, the Python‑based launch system introduces overhead and non‑determinism during boot and state transitions. **These limitations are structural and cannot be reliably mitigated through launch configuration alone**, motivating a native and deterministic lifecycle orchestration approach.
+
 ## 3. Architecture & LifecycleManager - "Solution"
 
 ### A Modular Solution for Complex Systems
@@ -204,3 +206,36 @@ ros2 service call /lifecycle_transition_device lifecycle_manager_msgs/srv/Transi
 ```
 
 This single call automatically transitions each node to its matching target state — navigation and motor stop, while camera and diagnostics stay running. This design completely decouples mission logic from lifecycle management.
+
+## 4. Deterministic Boot Flow (how it works) - "Deep-dive"
+
+### Technical Logic from Initialization to Operation
+The Lifecycle Manager follows a rigorous, deterministic sequence to ensure all nodes are prepared and synchronized.
+
+By identifying independent node groups at runtime from YAML dependency declarations, the system initializes multiple packages concurrently — reducing the theoretical boot time from **`O(N)`** sequential initialization to **`O(Depth(G))`**, where `Depth(G)` is the longest dependency path in the package graph.
+
+```mermaid
+flowchart LR
+    Start([SYSTEM STARTUP]) --> YAML["YAML Configuration"]
+    YAML --> Strategy{"Execution Strategy"}
+    Strategy --> Path[["ORCHESTRATOR PATH"]]
+    Path --> Ready([SYSTEM READY])
+    
+    style Start fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style Ready fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style YAML fill:#fff,stroke:#333
+    style Strategy fill:#fff,stroke:#333
+    style Path fill:#fff,stroke:#333
+```
+
+### Startup Sequence (Step-by-Step)
+
+1. **Load YAML Configuration** — Reads all package/node definitions, dependencies, and device-state mappings from a single YAML file.
+2. **Select Execution Strategy** — Determines parallel (multi-threaded) or sequential mode per YAML configuration.
+3. **Native Process Spawning** — Each package binary is launched via `fork`/`exec` with executable paths resolved dynamically by `ament_index_cpp`. Per-process log files are created with timestamps.
+4. **Dependency Wait** — For each node, polls the managed-state of declared dependency nodes until they reach `ACTIVE` (30-second timeout).
+5. **Lifecycle State Polling** — Calls `GetState` service with retry until the node responds, confirming it is alive and ready for state transitions.
+6. **Initial State Transition** — Applies the `DEVICE_INIT` target lifecycle state via the multi-step state machine (e.g., triggering `Configure ➔ Activate` for an `ACTIVE` target).
+
+After all nodes reach their initial states, the system enters the operational phase — waiting for Device State requests via `/lifecycle_transition_device` and applying per-node lifecycle targets through the `TransitionEngine`.
+
