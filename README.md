@@ -216,33 +216,33 @@ By identifying independent node groups at runtime from YAML dependency declarati
 
 ```mermaid
 flowchart TD
-    Start("<b>[ SYSTEM STARTUP ]</b>") --> YAML
+    Start("[ SYSTEM STARTUP ]") --> YAML
     
-    YAML["<b>YAML Configuration</b><br/>(Source of Truth)"] -.-> YN["Orchestration Manifest<br/>(Packages, Nodes, Deps)"]
+    YAML["YAML Configuration<br/>(Source of Truth)"] -.-> YN["Orchestration Manifest<br/>(Packages, Nodes, Deps)"]
     YAML --> Exec
     
-    Exec["<b>Execution Strategy</b><br/>(Parallel vs Seq)"] -.-> EN["Mode Selection<br/>(YAML Configuration)"]
+    Exec["Execution Strategy<br/>(Parallel vs Seq)"] -.-> EN["Mode Selection<br/>(YAML Configuration)"]
     Exec --> Path
     
-    subgraph Path ["<b>[ ORCHESTRATOR PATH ]</b><br/>(Parallel Thread / Seq Loop)"]
+    subgraph Path ["[ ORCHESTRATOR PATH ]  (Parallel Thread / Seq Loop)"]
         direction TB
-        Check["<b>Check if Enabled</b><br/>(Package Enable)"] -.-> CN["Package Enable Flag<br/>(f_packageLaunch)"]
+        Check["Check if Enabled<br/>(Package Enable)"] -.-> CN["Package Enable Flag<br/>(f_packageLaunch)"]
         Check --> Launch
         
-        Launch["<b>Package Launch</b><br/>(fork/exec)"] -.-> LN["Native Execution<br/>(POSIX Layer)"]
+        Launch["Package Launch<br/>(fork/exec)"] -.-> LN["Native Execution<br/>(POSIX Layer)"]
         Launch --> Dep
         
-        Dep["<b>Dependency & State Check</b>"] -.-> DN["<b>[ RETRY LOOP ]</b><br/>(GetState + Dep Polling)"]
+        Dep["Dependency & State Check"] -.-> DN["[ RETRY LOOP ]<br/>(GetState + Dep Polling)"]
         Dep --> Trans
         
-        Trans["<b>State Transition</b><br/>(ChangeState)"] -.-> TN["Lifecycle Control<br/>(Client Layer)"]
+        Trans["State Transition<br/>(ChangeState)"] -.-> TN["Lifecycle Control<br/>(Client Layer)"]
     end
     
-    Path --> Ready("<b>[ SYSTEM READY ]</b>")
+    Path --> Ready("[ SYSTEM READY ]")
 
     style Path fill:#e6e6e6,stroke:#333,stroke-width:2px
-    style Start fill:none,stroke:none,font-size:18px
-    style Ready fill:none,stroke:none,font-size:18px
+    style Start fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000
+    style Ready fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
     style YN fill:none,stroke:none
     style EN fill:none,stroke:none
     style CN fill:none,stroke:none
