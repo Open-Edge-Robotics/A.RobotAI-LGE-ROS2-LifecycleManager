@@ -62,57 +62,45 @@ ROS 2 lifecycle states are intentionally minimal and low‑level, while producti
 * Without centralized orchestration, mapping mission‑level behavior to coordinated lifecycle transitions across multiple nodes becomes **error‑prone and difficult to validate**, especially on low‑end SoCs where deterministic behavior is critical.
 > **💡 Summary**  
 > On low‑end embedded platforms, the Python‑based launch system introduces overhead and non‑determinism during boot and state transitions. **These limitations are structural and cannot be reliably mitigated through launch configuration alone**, motivating a native and deterministic lifecycle orchestration approach.
-> ## 3. Architecture & LifecycleManager
-To replace the 20+ Python scripts and uncoordinated nodes, the system was redesigned into a native C++ application composed of five core modules:
-* **ConfigFileManager:** Centralizes node configuration and dependencies using YAML.
-* **LifecycleNodeManager:** Manages the low-level lifecycle of each ROS 2 Managed Node.
-* **StateTransitionEngine:** Executes multi-step transitions and handles error recovery/retries.
-* **ServiceBridge:** Provides a unified interface for the application layer.
-* **LifecycleMonitor:** Monitors node health and resource usage in real-time.
-## 📊 Architecture Comparison
-The following diagram illustrates the fundamental architectural shift from a heavy Python interpreter to our lightweight C++ native orchestrator.
-```mermaid
-flowchart TD
-    subgraph Old [❌ Before: Python-Based ros2 launch]
-        P_Interpreter["Python Interpreter (Heavy Base RAM)"] --> P_Launch{"launch.py"}
-        P_Launch -- "1. High-Overhead Launch" --> P_N1[ROS 2 Node Process A]
-        P_Launch -- "2. High-Overhead Launch" --> P_N2[ROS 2 Node Process B]
-        P_Launch -- "3. High-Overhead Launch" --> P_N3[ROS 2 Node Process C]
-        P_Note["🚨 Sequential Bottleneck, CPU Spikes & OOM"] -.-> P_Launch
-    end
-    subgraph New [✅ After: C++ Lifecycle Manager]
-        C_Manager{"C++ LifecycleManager (Native OS Process, Ultra-Low RAM)"}
-        C_Manager == "Concurrent fork() & execvp()" ==> C_N1[Node Process A]
-        C_Manager == "Concurrent fork() & execvp()" ==> C_N2[Node Process B]
-        C_Manager == "Concurrent fork() & execvp()" ==> C_N3[Node Process C]
-        C_N1 -. "Lifecycle State: Active" .-> C_Manager
-        C_N2 -. "Lifecycle State: Active" .-> C_Manager
-        C_N3 -. "Lifecycle State: Active" .-> C_Manager
-        C_Note["💡 Safe Concurrency & Determinism"] -.-> C_Manager
-    end
-    
-    style P_Interpreter fill:#ffebee,stroke:#c62828,stroke-width:2px
-    style P_Launch fill:#ffcdd2,stroke:#c62828,stroke-width:2px
-    style C_Manager fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-⚙️ YAML-Driven Configuration
-The system uses a declarative YAML approach to manage node groups and priorities. This replaces hardcoded Python logic with flexible, data-driven configuration:
+## 3. Architecture & LifecycleManager
 
-yaml
-nodes:
-  - name: "lidar_driver"
-    package: "rplidar_ros"
-    priority: 10
-    managed: true
-  - name: "navigation_service"
-    package: "nav2_lifecycle_manager"
-    priority: 20
-    managed: true
-    dependencies: ["lidar_driver"]
-🔁 Multi-Step Lifecycle State Machine
-The Lifecycle Manager simplifies complex ROS 2 lifecycle sequences into single-call transitions by resolving intermediate states automatically:
+To replace the 20+ Python scripts and uncoordinated nodes, the system was redesigned into a native C++ application composed of five core modules:
+
+ConfigFileManager: Centralizes node configuration and dependencies using YAML.
+LifecycleNodeManager: Manages the low-level lifecycle of each ROS 2 Managed Node.
+StateTransitionEngine: Executes multi-step transitions and handles error recovery/retries.
+ServiceBridge: Provides a unified interface for the application layer.
+LifecycleMonitor: Monitors node health and resource usage in real-time.
+### 📊 Architecture Comparison
+
+The following diagram illustrates the fundamental architectural shift from a heavy Python interpreter to our lightweight C++ native orchestrator.
+
+```mermaid flowchart TD subgraph Old [❌ Before: Python-Based ros2 launch] P_Interpreter["Python Interpreter (Heavy Base RAM)"] --> P_Launch{"launch.py"} P_Launch -- "1. High-Overhead Launch" --> P_N1[ROS 2 Node Process A] P_Launch -- "2. High-Overhead Launch" --> P_N2[ROS 2 Node Process B] P_Launch -- "3. High-Overhead Launch" --> P_N3[ROS 2 Node Process C] P_Note["🚨 Sequential Bottleneck, CPU Spikes & OOM"] -.-> P_Launch end
+
+subgraph New [✅ After: C++ Lifecycle Manager]
+    C_Manager{"C++ LifecycleManager (Native OS Process, Ultra-Low RAM)"}
+    C_Manager == "Concurrent fork() & execvp()" ==> C_N1[Node Process A]
+    C_Manager == "Concurrent fork() & execvp()" ==> C_N2[Node Process B]
+    C_Manager == "Concurrent fork() & execvp()" ==> C_N3[Node Process C]
+    C_N1 -. "Lifecycle State: Active" .-> C_Manager
+    C_N2 -. "Lifecycle State: Active" .-> C_Manager
+    C_N3 -. "Lifecycle State: Active" .-> C_Manager
+    C_Note["💡 Safe Concurrency & Determinism"] -.-> C_Manager
+end
+style P_Interpreter fill:#ffebee,stroke:#c62828,stroke-width:2px
+style P_Launch fill:#ffcdd2,stroke:#c62828,stroke-width:2px
+style C_Manager fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+```
+
+### ⚙️ YAML-Driven Configuration The system uses a declarative YAML approach to manage node groups and priorities. This replaces hardcoded Python logic with flexible, data-driven configuration:
+
+```yaml nodes:
+
+name: "lidar_driver" package: "rplidar_ros" priority: 10 managed: true
+name: "navigation_service" package: "nav2_lifecycle_manager" priority: 20 managed: true dependencies: ["lidar_driver"] ```
+### 🔁 Multi-Step Lifecycle State Machine The Lifecycle Manager simplifies complex ROS 2 lifecycle sequences into single-call transitions by resolving intermediate states automatically:
 
 UNCONFIGURED ➔ ACTIVE: Automatically triggering Configure ➔ Activate
 ACTIVE ➔ UNCONFIGURED: Automatically triggering Deactivate ➔ Cleanup
 The explicit TransitionEngine handles execution semantics and timeout policies transparently under the hood.
-🤖 Device State Abstraction
-To bridge the gap between high-level robot missions and low-level node states, a "Device State" abstraction was introduced. This allows orchestrating massive state machines (e.g., "Cleaning mode", "Standby mode", "Shutdown") with a single service call, seamlessly aligning abstract robotic missions with low-level deterministic OS process transitions.
+### 🤖 Device State Abstraction To bridge the gap between high-level robot missions and low-level node states, a "Device State" abstraction was introduced. This allows orchestrating massive state machines (e.g., "Cleaning mode", "Standby mode", "Shutdown") with a single service call, seamlessly aligning abstract robotic missions with low-level deterministic OS process transitions.
