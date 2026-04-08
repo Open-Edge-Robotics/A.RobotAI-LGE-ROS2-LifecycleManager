@@ -11,7 +11,7 @@ A C++ deterministic lifecycle orchestrator optimized for ROS 2 embedded systems.
 > and reproduction of system behavior.
 >
 > The complete C++ source code is planned to be released under the Apache License 2.0
-> following internal corporate compliance procedures.
+> following internal compliance procedures.
 
 A production-grade, C++ deterministic lifecycle orchestrator optimized for resource-constrained ROS 2 embedded systems.
 ## 📑 Table of Contents
@@ -356,8 +356,8 @@ ros2 run lifecycle_manager lifecycle_manager --ros-args --params-file ./your_con
 ---
 
 ### 📝 License & Source Code Access
-> 🚧 **[NOTICE]**
-> This project is officially licensed under the **Apache License 2.0**. This allows for both internal commercial use and open-source contributions, aligning with standard industry practices for high-performance robot software.
->
-> *(As noted at the top of this document, the complete C++ source code is currently undergoing internal corporate compliance review (LGE) and will be released to this public repository prior to ROSCon 2026).*
+This project is licensed under the **Apache License 2.0**, allowing internal commercial use as well as future open-source contributions.
 
+As described at the top of this document, this repository currently provides architectural documentation, configuration examples, and empirical validation results that fully describe the execution model and lifecycle behavior of the system.
+
+The complete C++ source code is planned to be released under the same license following completion of internal compliance procedures.
