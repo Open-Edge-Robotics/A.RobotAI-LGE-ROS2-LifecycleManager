@@ -318,4 +318,46 @@ The measured results are summarized in the data below.
 
 > **Conclusion:** By removing Python from the runtime path, memory pressure during system startup was reduced enough to **completely eliminate OOM events** observed in the baseline configuration. These improvements were achieved without modifying the ROS 2 nodes themselves, and resulted in a stable and repeatable boot sequence on the target hardware.
 
+## 6. Source, Build & License
+
+### ⚙️ Technical Requirements
+*   **Architecture:** `x86_64` (Development/PC) and `ARM64/AArch64` (Embedded Target)
+*   **OS:** Ubuntu 22.04 (Jammy) or later / Linux (Yocto-based)
+*   **ROS 2:** Humble, Iron, or Jazzy
+*   **Compiler:** C++17 or higher (Required for `<filesystem>` and modern C++ features)
+*   **Dependencies:** `rclcpp`, `lifecycle_msgs`, `lifecycle_manager_msgs`, `yaml-cpp`
+
+---
+
+### 🛠️ Build Instructions
+
+**1. Build:**
+Use `colcon` to build the orchestration packages in your standard workspace.
+```bash
+colcon build --packages-select lifecycle_manager_msgs lifecycle_manager
+```
+
+**2. Deploy:**
+Push (copy) the resulting build artifacts (binaries and libraries) to your target robot system or staging environment.
+
+**3. Run:**
+You can launch the manager using the provided launch file (recommended) or run the binary directly with your custom configuration.
+
+**Option A: Using the launch file (Recommended)**
+```bash
+ros2 launch lifecycle_manager lifecycle_manager.launch.py
+```
+
+**Option B: Direct execution with custom parameters**
+```bash
+ros2 run lifecycle_manager lifecycle_manager --ros-args --params-file ./your_config.yaml
+```
+
+---
+
+### 📝 License & Source Code Access
+> 🚧 **[NOTICE]**
+> This project is officially licensed under the **Apache License 2.0**. This allows for both internal commercial use and open-source contributions, aligning with standard industry practices for high-performance robot software.
+>
+> *(As noted at the top of this document, the complete C++ source code is currently undergoing internal corporate compliance review (LGE) and will be released to this public repository prior to ROSCon 2026).*
 
