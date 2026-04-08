@@ -299,10 +299,15 @@ The measured results are summarized in the data below.
 *   Peak memory usage during startup decreased from **305.0MB to 156.3MB**, corresponding to a **48.7% reduction**.
 *   **CPU contention spikes** observed during early boot in the baseline configuration were completely eliminated.
 
-#### 📊 Chart Data Summary
+#### 📊 Performance Charts
+
+> 💡 **<img width="2046" height="621" alt="image" src="https://github.com/user-attachments/assets/afbaf7e0-cb5e-44cc-975f-44b138b0ce5d" />
+**
+
+#### 📋 Chart Data Summary
 
 *   **⏱️ Execution Time Comparison (Boot Speed)**
-    *   Python Launch:`31.00s`
+    *   Python Launch: `31.00s`
     *   Binary (C++): `5.67s`
     *   **Improvement: ↓ 81.7%** `(31.00s ➔ 5.67s)`
     
@@ -312,4 +317,5 @@ The measured results are summarized in the data below.
     *   **Improvement: ↓ 48.7%** `(305.00MB ➔ 156.33MB)`
 
 > **Conclusion:** By removing Python from the runtime path, memory pressure during system startup was reduced enough to **completely eliminate OOM events** observed in the baseline configuration. These improvements were achieved without modifying the ROS 2 nodes themselves, and resulted in a stable and repeatable boot sequence on the target hardware.
+
 
