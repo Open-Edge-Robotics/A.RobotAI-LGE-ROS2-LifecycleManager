@@ -23,39 +23,22 @@ A production-grade, C++ deterministic lifecycle orchestrator optimized for resou
 6. [Source, Build & License](#6-source-build--license)
 ---
 ## 1. Overview - "What & Why?"
-This document introduces "Deterministic Lifecycle Manager", a C++‑based lifecycle orchestration service designed to run ROS 2 reliably on low‑end embedded robotic platforms.
-
-The target systems are cost‑constrained commercial robotic platforms built on entry‑level SoCs such as Rockchip PX30, LG DQ1, or other Cortex‑A35‑class CPUs, typically equipped with less than 1 GB of RAM.
-
-On these platforms, boot‑time behavior and peak resource usage critically impact system stability.
-
-Motivation
-During system integration and production‑equivalent platform evaluation, we repeatedly encountered critical issues when using the standard Python‑based ros2 launch workflow on resource‑constrained hardware.
-
+This document introduces the **"Deterministic Lifecycle Manager"**, a C++‑based lifecycle orchestration service designed to run ROS 2 reliably on low‑end embedded robotic platforms.
+The target systems are cost-constrained commercial robotic platforms built on entry-level SoCs such as **Rockchip PX30, LG DQ1**, or other Cortex-A35-class CPUs, typically equipped with **less than 1GB of RAM**. On these platforms, boot-time behavior and peak resource usage critically impact system stability.
+### 🔴 Motivation
+During system integration and production‑equivalent platform evaluation, we repeatedly encountered critical issues when using the standard Python‑based `ros2 launch` workflow on resource‑constrained hardware.
 The most common problems were:
-
-high baseline RAM usage before application logic starts,
-large CPU spikes during parallel node startup,
-frequent OOM kills during early boot,
-unstable and non‑deterministic startup sequences in production images.
-These issues were consistently reproducible across multiple low‑end SoCs and robot products.
-
-They could not be resolved in a reliable way through parameter tuning, launch configuration changes, or partial optimization.
-
-Our conclusion was that the problems originated from the runtime overhead and process model of the Python‑based launch system itself, which does not scale well under tight CPU and memory constraints.
-
-Design Approach
-To address these limitations, we implemented Deterministic Lifecycle Manager as a minimal, native C++ service that launches and supervises ROS 2 nodes directly as OS‑level processes.
-
-Key characteristics of Deterministic Lifecycle Manager include:
-
-no Python dependency on the target system,
-ROS 2 nodes built and executed as native C++ binaries,
-direct process control using standard POSIX primitives such as fork(), execvp(), and SIGCHLD.
-This design preserves existing ROS 2 components—including DDS communication and lifecycle semantics—while eliminating the runtime overhead introduced by Python‑based launch tooling.
-
-Deterministic Lifecycle Manager is not a replacement for ROS 2.
-
-It is a focused orchestration layer that provides deterministic and resource‑efficient boot and lifecycle management, specifically tailored for low‑end embedded systems used in cost‑constrained production robots.
-
-License: Apache 2.0
+* High baseline RAM usage before application logic starts
+* Large CPU spikes during parallel node startup
+* Frequent OOM (Out Of Memory) kills during early boot
+* Unstable and non-deterministic startup sequences in production images
+These issues were consistently reproducible across multiple low-end SoCs and robot products. They could not be resolved in a reliable way through parameter tuning, launch configuration changes, or partial optimization. 
+**Our conclusion** was that the problems originated from the runtime overhead and process model of the Python-based launch system itself, which does not scale well under tight CPU and memory constraints.
+### 🟢 Design Approach
+To address these limitations, we implemented the **Deterministic Lifecycle Manager** as a minimal, native C++ service that launches and supervises ROS 2 nodes directly as OS-level processes.
+Key characteristics include:
+* **Zero Python dependency** on the target system
+* ROS 2 nodes built and executed as native C++ binaries
+* **Fast and Safe Concurrent Spawning:** Utilizes C++ threads alongside standard POSIX primitives (`fork()`, `execvp()`, `SIGCHLD`) to achieve true parallel execution without the CPU bottlenecks typical of Python.
+This design preserves existing ROS 2 components—including DDS communication and lifecycle semantics—while eliminating the runtime overhead introduced by Python-based launch tooling.
+> **💡 Note:** Deterministic Lifecycle Manager is *not* a replacement for ROS 2. It is a focused orchestration layer that provides deterministic and resource-efficient boot and lifecycle management, specifically tailored for low-end embedded systems used in cost-constrained production robots.
