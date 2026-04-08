@@ -215,17 +215,47 @@ The Lifecycle Manager follows a rigorous, deterministic sequence to ensure all n
 By identifying independent node groups at runtime from YAML dependency declarations, the system initializes multiple packages concurrently — reducing the theoretical boot time from **`O(N)`** sequential initialization to **`O(Depth(G))`**, where `Depth(G)` is the longest dependency path in the package graph.
 
 ```mermaid
-flowchart LR
-    Start([SYSTEM STARTUP]) --> YAML["YAML Configuration"]
-    YAML --> Strategy{"Execution Strategy"}
-    Strategy --> Path[["ORCHESTRATOR PATH"]]
-    Path --> Ready([SYSTEM READY])
+flowchart TD
+    Start("<b>[ SYSTEM STARTUP ]</b>") --> YAML
     
-    style Start fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-    style Ready fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    style YAML fill:#fff,stroke:#333
-    style Strategy fill:#fff,stroke:#333
-    style Path fill:#fff,stroke:#333
+    YAML["<b>YAML Configuration</b><br/>(Source of Truth)"] -.-> YN["Orchestration Manifest<br/>(Packages, Nodes, Deps)"]
+    YAML --> Exec
+    
+    Exec["<b>Execution Strategy</b><br/>(Parallel vs Seq)"] -.-> EN["Mode Selection<br/>(YAML Configuration)"]
+    Exec --> Path
+    
+    subgraph Path ["<b>[ ORCHESTRATOR PATH ]</b><br/>(Parallel Thread / Seq Loop)"]
+        direction TB
+        Check["<b>Check if Enabled</b><br/>(Package Enable)"] -.-> CN["Package Enable Flag<br/>(f_packageLaunch)"]
+        Check --> Launch
+        
+        Launch["<b>Package Launch</b><br/>(fork/exec)"] -.-> LN["Native Execution<br/>(POSIX Layer)"]
+        Launch --> Dep
+        
+        Dep["<b>Dependency & State Check</b>"] -.-> DN["<b>[ RETRY LOOP ]</b><br/>(GetState + Dep Polling)"]
+        Dep --> Trans
+        
+        Trans["<b>State Transition</b><br/>(ChangeState)"] -.-> TN["Lifecycle Control<br/>(Client Layer)"]
+    end
+    
+    Path --> Ready("<b>[ SYSTEM READY ]</b>")
+
+    style Path fill:#e6e6e6,stroke:#333,stroke-width:2px
+    style Start fill:none,stroke:none,font-size:18px
+    style Ready fill:none,stroke:none,font-size:18px
+    style YN fill:none,stroke:none
+    style EN fill:none,stroke:none
+    style CN fill:none,stroke:none
+    style LN fill:none,stroke:none
+    style DN fill:none,stroke:none
+    style TN fill:none,stroke:none
+    
+    style YAML fill:#fff,stroke:#333,stroke-width:2px
+    style Exec fill:#fff,stroke:#333,stroke-width:2px
+    style Check fill:#fff,stroke:#333,stroke-width:2px
+    style Launch fill:#fff,stroke:#333,stroke-width:2px
+    style Dep fill:#fff,stroke:#333,stroke-width:2px
+    style Trans fill:#fff,stroke:#333,stroke-width:2px
 ```
 
 ### Startup Sequence (Step-by-Step)
@@ -238,4 +268,3 @@ flowchart LR
 6. **Initial State Transition** — Applies the `DEVICE_INIT` target lifecycle state via the multi-step state machine (e.g., triggering `Configure ➔ Activate` for an `ACTIVE` target).
 
 After all nodes reach their initial states, the system enters the operational phase — waiting for Device State requests via `/lifecycle_transition_device` and applying per-node lifecycle targets through the `TransitionEngine`.
-
