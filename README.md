@@ -268,3 +268,48 @@ flowchart TD
 6. **Initial State Transition** — Applies the `DEVICE_INIT` target lifecycle state via the multi-step state machine (e.g., triggering `Configure ➔ Activate` for an `ACTIVE` target).
 
 After all nodes reach their initial states, the system enters the operational phase — waiting for Device State requests via `/lifecycle_transition_device` and applying per-node lifecycle targets through the `TransitionEngine`.
+
+## 5. Metrics & Validation - "Validation"
+
+This section validates the impact of Deterministic Lifecycle Manager using measurements collected on real robot hardware under deployment-equivalent conditions. All measurements were performed on identical hardware using the same ROS 2 node set. The evaluation environment closely matches the target production configuration, although the system has not yet been deployed to mass production.
+
+### 🧪 Test Environment
+| ITEM | Specification |
+| :--- | :--- |
+| **HW Platform (AP)** | LG DQ1 (Cortex-A53x4 @ 1GHz) |
+| **RAM** | 1GB |
+| **eMMC** | 4GB |
+| **ROS 2 Distribution** | ROS 2 Humble |
+| **Managed ROS 2 Nodes** | 12 nodes + lifecycle node |
+| **OS** | Yocto based ROS 2 |
+| **Yocto Version** | Kirkstone |
+
+### 🚀 Boot Configurations
+Two boot configurations were evaluated:
+*   **Baseline: ROS 2 default Python-based launch**
+    ROS 2 nodes were started using the standard `ros2 launch` workflow, which loads the Python interpreter and initializes the launch framework during system boot.
+*   **Modified: Binary-based launch using Deterministic Lifecycle Manager**
+    All ROS 2 nodes were executed directly as OS processes under DLM control, without involving the Python runtime.
+
+> *No other system components or ROS 2 node implementations were changed between the two configurations.*
+
+### 📈 Results
+The measured results are summarized in the data below.
+*   Boot completion time was reduced from **31.0s to 5.67s**, corresponding to an **81.7% reduction**.
+*   Peak memory usage during startup decreased from **305.0MB to 156.3MB**, corresponding to a **48.7% reduction**.
+*   **CPU contention spikes** observed during early boot in the baseline configuration were completely eliminated.
+
+#### 📊 Chart Data Summary
+
+*   **⏱️ Execution Time Comparison (Boot Speed)**
+    *   Python Launch:`31.00s`
+    *   Binary (C++): `5.67s`
+    *   **Improvement: ↓ 81.7%** `(31.00s ➔ 5.67s)`
+    
+*   **💾 Peak Memory Usage Comparison (RAM)**
+    *   Python Launch: `305.00MB`
+    *   Binary (C++): `156.33MB`
+    *   **Improvement: ↓ 48.7%** `(305.00MB ➔ 156.33MB)`
+
+> **Conclusion:** By removing Python from the runtime path, memory pressure during system startup was reduced enough to **completely eliminate OOM events** observed in the baseline configuration. These improvements were achieved without modifying the ROS 2 nodes themselves, and resulted in a stable and repeatable boot sequence on the target hardware.
+
