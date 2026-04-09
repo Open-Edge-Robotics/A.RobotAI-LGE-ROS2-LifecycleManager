@@ -22,6 +22,7 @@ A C++ deterministic lifecycle orchestrator optimized for ROS 2 embedded systems.
 | micro-ROS            | Optimized for MCUs                 | Not for Linux-based systems |
 | **LifecycleManager** | Deterministic, low-overhead, lifecycle-aware | Production-focused |
 
+
 > 🚧 **[NOTICE] Project Status**
 >
 > This repository provides architectural documentation, YAML-based configuration
@@ -33,6 +34,7 @@ A C++ deterministic lifecycle orchestrator optimized for ROS 2 embedded systems.
 >
 > The complete C++ source code is planned to be released under the Apache License 2.0
 > following internal compliance procedures.
+
 
 ## 📑 Table of Contents
 1. [Overview - "What & Why?"](#1-overview---what--why)
