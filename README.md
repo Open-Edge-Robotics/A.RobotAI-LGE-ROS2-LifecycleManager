@@ -11,6 +11,8 @@ A C++ deterministic lifecycle orchestrator optimized for ROS 2 embedded systems.
 
 📌 Boot time is defined as the time from process start until all required nodes reach the **ACTIVE** lifecycle state.
 
+📌 Measurements are based on lifecycle activation logs and system-level monitoring (htop) under identical workloads.
+
 
 ## ⚖️ Comparison
 
