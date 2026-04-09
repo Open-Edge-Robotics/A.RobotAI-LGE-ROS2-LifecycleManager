@@ -1,6 +1,27 @@
 # A.RobotAI-LGE-ROS2-LifecycleManager
 A C++ deterministic lifecycle orchestrator optimized for ROS 2 embedded systems.
 >
+## 🚀 Performance Summary
+
+- Boot time: **31s → 5s** (**-82%**)
+- RAM usage: **305MB → 156MB** (**~50% reduction**)
+- CPU usage: **60% → 40%**
+
+📌 Tested on low-end embedded SoCs (e.g., 1GB RAM, Cortex-A35/A53)
+
+📌 Boot time is defined as the time from process start until all required nodes reach the **ACTIVE** lifecycle state.
+
+
+## ⚖️ Comparison
+
+| Approach              | Strengths                          | Limitations |
+|----------------------|------------------------------------|-------------|
+| ros2 launch (Python) | Flexible, easy to use              | High RAM usage, non-deterministic startup |
+| systemd              | Stable process management          | No ROS 2 lifecycle awareness |
+| ROS 2 Composition    | Efficient intra-process execution  | No system-level orchestration |
+| micro-ROS            | Optimized for MCUs                 | Not for Linux-based systems |
+| **LifecycleManager** | Deterministic, low-overhead, lifecycle-aware | Production-focused |
+
 > 🚧 **[NOTICE] Project Status**
 >
 > This repository provides architectural documentation, YAML-based configuration
