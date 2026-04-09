@@ -15,11 +15,11 @@ A C++ deterministic lifecycle orchestrator optimized for ROS 2 embedded systems.
 
 ## 📑 Table of Contents
 1. [Overview - "What & Why?"](#1-overview---what--why)
-2. [Structural Pain Points in Production Systems](#2-structural-pain-points-in-production-systems)
-3. [Architecture & LifecycleManager](#3-architecture--lifecyclemanager)
-4. [Deterministic Boot Flow (Deep-dive)](#4-deterministic-boot-flow-deep-dive)
-5. [Metrics & Validation](#5-metrics--validation)
-6. [Source, Build & License](#6-source-build--license)
+2. [Structural Pain Points in Production Systems - "Pain Point"](#2-structural-pain-points-in-production-systems)
+3. [Architecture & LifecycleManager - "Solution"](#3-architecture--lifecyclemanager)
+4. [Deterministic Boot Flow - "Deep-dive"](#4-deterministic-boot-flow-deep-dive)
+5. [Metrics & Validation - "Validation"](#5-metrics--validation)
+6. [Source, Build & License - "Open-Source Status"](#6-source-build--license)
 ---
 ## 1. Overview - "What & Why?"
 This document introduces the **"Deterministic Lifecycle Manager"**, a C++‑based lifecycle orchestration service designed to run ROS 2 reliably on low‑end embedded robotic platforms.
