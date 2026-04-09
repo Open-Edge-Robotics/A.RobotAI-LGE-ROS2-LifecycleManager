@@ -13,7 +13,7 @@ A C++ deterministic lifecycle orchestrator optimized for ROS 2 embedded systems.
 
 📌 Measurements are based on lifecycle activation logs and system-level monitoring (htop) under identical workloads.
 
-# 🎯 Why this matters
+## 🎯 Why this matters
 ROS 2 is powerful, but still too heavy for low-cost embedded robots.
 
 This project demonstrates that ROS 2 can be:
@@ -348,6 +348,16 @@ The measured results are summarized in the data below.
     *   Python Launch: `305.00MB`
     *   Binary (C++): `156.33MB`
     *   **Improvement: ↓ 48.7%** `(305.00MB ➔ 156.33MB)`
+
+## 🧪 Reproducibility
+
+All experiments were conducted on identical hardware and software configurations.
+
+- Same nodes and execution graph
+- Same workload
+- Only the orchestration mechanism was changed (Python-based ros2 launch vs LifecycleManager)
+
+Detailed configuration and setup are available in this repository.
 
 > **Conclusion:** By removing Python from the runtime path, memory pressure during system startup was reduced enough to **completely eliminate OOM events** observed in the baseline configuration. These improvements were achieved without modifying the ROS 2 nodes themselves, and resulted in a stable and repeatable boot sequence on the target hardware.
 
