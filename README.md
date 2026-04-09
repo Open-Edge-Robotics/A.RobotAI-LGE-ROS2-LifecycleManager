@@ -13,6 +13,13 @@ A C++ deterministic lifecycle orchestrator optimized for ROS 2 embedded systems.
 
 📌 Measurements are based on lifecycle activation logs and system-level monitoring (htop) under identical workloads.
 
+# 🎯 Why this matters
+ROS 2 is powerful, but still too heavy for low-cost embedded robots.
+
+This project demonstrates that ROS 2 can be:
+- deployed on 1GB-class hardware
+- booted deterministically
+- used in real production environments
 
 ## ⚖️ Comparison
 
