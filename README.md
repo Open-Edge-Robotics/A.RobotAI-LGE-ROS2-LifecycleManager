@@ -239,13 +239,14 @@ The application layer simply declares a target state; the Lifecycle Manager reso
 ### 🤖 Device State Abstraction
 To bridge the semantic gap between robot missions and low-level lifecycle states, the Lifecycle Manager introduces a "Device State" abstraction.
 
-| Node \ Device State | State 1 (Cleaning) | State 2 (Standby) | State 3 (Shutdown) |
+| Node \ Device State | NORMAL | SLEEP | POWERSAVE |
 | :--- | :--- | :--- | :--- |
-| `navigation_service` | ACTIVE | INACTIVE | FINALIZED |
-| `lidar_driver` | ACTIVE | INACTIVE | FINALIZED |
-| `camera_driver` | ACTIVE | ACTIVE | FINALIZED |
-| `motor_controller` | ACTIVE | INACTIVE | FINALIZED |
-| `diagnostic_service` | ACTIVE | ACTIVE | FINALIZED |
+| `slam_node` | ACTIVE | INACTIVE | FINALIZED |
+| `lidar_node` | ACTIVE | INACTIVE | FINALIZED |
+| `navigation_node` | ACTIVE | INACTIVE | FINALIZED |
+| `motor_node` | ACTIVE | INACTIVE | FINALIZED |
+| `camera_node` | ACTIVE | ACTIVE | INACTIVE |
+| `diagnostic_node` | ACTIVE | ACTIVE | ACTIVE |
 
 To switch the robot from "NORMAL" to "SLEEP", just call:
 
@@ -382,7 +383,7 @@ A side-by-side boot comparison video (Python launch vs LifecycleManager) is incl
 **1. Build:**
 Use `colcon` to build the orchestration packages in your standard workspace.
 ```bash
-colcon build --packages-select lifecycle_manager_msgs lifecycle_manager_service
+colcon build --packages-select lifecycle_manager_msgs lifecycle_manager
 ```
 
 **2. Deploy:**
@@ -393,12 +394,12 @@ You can launch the manager using the provided launch file (recommended) or run t
 
 **Option A: Using the launch file (Recommended)**
 ```bash
-ros2 launch lifecycle_manager_service lifecycle_manager.launch.py
+ros2 launch lifecycle_manager lifecycle_manager.launch.py
 ```
 
 **Option B: Direct execution with custom parameters**
 ```bash
-ros2 run lifecycle_manager_service lifecycle_manager --ros-args --params-file ./your_config.yaml
+ros2 run lifecycle_manager lifecycle_manager --ros-args --params-file ./your_config.yaml
 ```
 
 ---
