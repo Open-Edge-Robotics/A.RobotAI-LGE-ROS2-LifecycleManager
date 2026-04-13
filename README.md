@@ -122,15 +122,17 @@ flowchart TD
     subgraph Manager ["LIFECYCLE MANAGER (Native C++)"]
         direction TB
         SL["Service Layer<br/>(Queue Manager)"]
-        Conf["Configuration<br/>(YAML Parser)"]
-        Core["Orchestration Core<br/>(Parallel spawning, state-machine tracking)"]
-        PL["Process Launcher<br/>(fork/exec/wait)"]
-        LC["Lifecycle Client<br/>(Service Interface)"]
+        Conf["Config Engine<br/>(Modern YAML Parser)"]
+        TE["Transition Engine<br/>(State-machine Orchestrator)"]
+        NL["Node Launcher<br/>(POSIX Process Manager)"]
+        LC["Lifecycle Client<br/>(Health Monitor & ROS Interface)"]
+        Utils["Lifecycle Utils<br/>(Core Helper Functions)"]
         
-        SL --- Core
-        Conf --- Core
-        Core --- PL
-        Core --- LC
+        SL --- TE
+        Conf --- TE
+        TE --- NL
+        TE --- LC
+        Utils --- TE
     end
 
     subgraph Nodes ["MANAGED ROS 2 NODES"]
@@ -143,7 +145,7 @@ flowchart TD
     App -- "ROS 2 Service<br/>(/lifecycle_transition_device)" --> SL
     YAML --> Conf
     
-    PL -- "OS Signals (SIGCHLD)<br/>& Native Execution" --> Nodes
+    NL -- "OS Signals (SIGCHLD)<br/>& Native Execution" --> Nodes
     LC -- "ROS 2 standard<br/>GetState / ChangeState" --> Nodes
 
     style App fill:#f9f9f9,stroke:#333,stroke-width:2px
@@ -151,20 +153,21 @@ flowchart TD
     style Nodes fill:#e6e6e6,stroke:#333,stroke-width:2px
     style SL fill:#fff,stroke:#333
     style Conf fill:#fff,stroke:#333
-    style Core fill:#fff,stroke:#333
-    style PL fill:#fff,stroke:#333
+    style TE fill:#fff,stroke:#333
+    style NL fill:#fff,stroke:#333
     style LC fill:#fff,stroke:#333
+    style Utils fill:#fff,stroke:#333
     style YAML fill:#fff,stroke:#333,stroke-width:2px
     style NA fill:#fff,stroke:#333
     style NB fill:#fff,stroke:#333
     style NN fill:#fff,stroke:#333
 ```
 
-*   **Service Layer** – Exposes the `lifecycle_transition_device` ROS 2 service and manages a thread-safe work queue. A dedicated spin thread handles ROS 2 callbacks while the main thread processes queued transitions serially, ensuring deterministic execution and preventing race conditions.
-*   **Configuration Engine** – A centralized YAML file, loaded as ROS 2 node parameters, serves as the single source of truth for all package definitions, executable paths, dependency relationships, and per-device-state lifecycle mappings. Adding a new node requires only a YAML entry — no code changes.
-*   **Orchestration Core** – Implements parallel or sequential package startup based on YAML dependency graphs. Resolves executable paths dynamically at runtime using `ament_index_cpp` API, searching across standard ROS 2 directories (`lib/`, `bin/`, `share/`). This avoids fragile hardcoded paths while maintaining full workspace compatibility across different ROS 2 environments.
-*   **Process Launcher** – Handles native process spawning via POSIX `fork`/`exec` with `SIGCHLD` signal handling for child process reaping. Supports per-process I/O redirection and timestamped log file management for every boot session.
-*   **Lifecycle Client** – Wraps standard ROS 2 `GetState` and `ChangeState` service calls with configurable retry and timeout policies.
+*   **Service Layer** – Exposes the `/lifecycle_transition_device` ROS 2 service and manages a thread-safe work queue. It supports string-based state transition requests (e.g., "NORMAL", "SLEEP") for improved human readability and CLI usability.
+*   **Config Engine** – A centralized YAML parser that serves as the single source of truth. It supports professional name-based device state definitions, removing the need for fragile numeric indexing.
+*   **Transition Engine** – The central orchestrator that coordinates complex lifecycle state machines across multiple packages. It implements the serialization of state transition requests to prevent race conditions during concurrent updates.
+*   **Node Launcher** – Handles native process spawning via POSIX `fork`/`exec` and monitors child process health using `SIGCHLD`. It manages dynamic path resolution and per-process log redirection.
+*   **Lifecycle Client** – Interfaces with managed nodes using standard ROS 2 `GetState` and `ChangeState` services, featuring robust retry mechanisms and health monitoring.
 
 **Architecture Independence** – By relying exclusively on POSIX standard system calls (`fork`, `execvp`, `sigaction`) and standard ROS 2 APIs, the Manager achieves 100% portability between ARM64 and x86_64 architectures. This ensures consistent behavioral deterministic across all development and deployment platforms.
 
@@ -201,12 +204,17 @@ flowchart TD
 All orchestration behavior is defined declaratively in a single YAML file:
 
 ```yaml
-# Example: Adding a node to the system
-master_service:
-  executable: master_service
-  dependency: ["package_2,node_1"]  # Start only after this dependency is ACTIVE
-  device_state_1: ACTIVE             # Normal Operation
-  device_state_2: INACTIVE           # Standby Mode
+# Example: Configuration with Professional State Names
+LIFECYCLE_MANAGER_CONFIG:
+  DEVICE_STATE_NAMES: ["NORMAL", "SLEEP", "POWERSAVE"]
+
+PACKAGE_slam_package:
+  PACKAGE_ENABLE: true
+  NODE_slam_node:
+    EXECUTABLE: slam_node
+    DEPENDENCY: ["lidar_package,lidar_node"]
+    DEVICE_STATE_NORMAL: ACTIVE
+    DEVICE_STATE_SLEEP: INACTIVE
 ```
 
 Key configuration capabilities:
@@ -239,10 +247,10 @@ To bridge the semantic gap between robot missions and low-level lifecycle states
 | `motor_controller` | ACTIVE | INACTIVE | FINALIZED |
 | `diagnostic_service` | ACTIVE | ACTIVE | FINALIZED |
 
-To switch the robot from "Cleaning" to "Standby", just call:
+To switch the robot from "NORMAL" to "SLEEP", just call:
 
 ```bash
-ros2 service call /lifecycle_transition_device lifecycle_manager_msgs/srv/TransitionDevice "{request: 2}"
+ros2 service call /lifecycle_transition_device lifecycle_manager_msgs/srv/TransitionDevice "{request: 'SLEEP'}"
 ```
 
 This single call automatically transitions each node to its matching target state — navigation and motor stop, while camera and diagnostics stay running. This design completely decouples mission logic from lifecycle management.
@@ -252,49 +260,30 @@ This single call automatically transitions each node to its matching target stat
 ### Technical Logic from Initialization to Operation
 The Lifecycle Manager follows a rigorous, deterministic sequence to ensure all nodes are prepared and synchronized.
 
-By identifying independent node groups at runtime from YAML dependency declarations, the system initializes multiple packages concurrently — reducing the theoretical boot time from **`O(N)`** sequential initialization to **`O(Depth(G))`**, where `Depth(G)` is the longest dependency path in the package graph.
+By identifying independent node groups at runtime from YAML dependency declarations (e.g., `DEPENDENCY: ["pkg_name,node_name"]`), the system initializes multiple packages concurrently — reducing the theoretical boot time from **`O(N)`** sequential initialization to **`O(Depth(G))`**, where `Depth(G)` is the longest dependency path in the package graph.
 In other words, boot time becomes bounded by the longest dependency chain rather than the total number of nodes.
 
 
 ```mermaid
 flowchart TD
-    Start("[ SYSTEM STARTUP ]") --> YAML
+    Start("[ SYSTEM STARTUP ]") --> YAML["<b>1. Load YAML Configuration</b><br/>(Source of Truth)"]
+    YAML --> Exec["<b>2. Select Execution Strategy</b><br/>(Parallel vs Sequential)"]
     
-    YAML["YAML Configuration<br/>(Source of Truth)"] -.-> YN["Orchestration Manifest<br/>(Packages, Nodes, Deps)"]
-    YAML --> Exec
-    
-    Exec["Execution Strategy<br/>(Parallel vs Seq)"] -.-> EN["Mode Selection<br/>(YAML Configuration)"]
-    Exec --> Path
-    
-    subgraph Path ["[ ORCHESTRATOR PATH ]  (Parallel Thread / Seq Loop)"]
+    subgraph Path ["[ ORCHESTRATOR PATH ]"]
         direction TB
-        Check["Check if Enabled<br/>(Package Enable)"] -.-> CN["Package Enable Flag<br/>(f_packageLaunch)"]
-        Check --> Launch
-        
-        Launch["Package Launch<br/>(fork/exec)"] -.-> LN["Native Execution<br/>(POSIX Layer)"]
-        Launch --> Dep
-        
-        Dep["Dependency & State Check"] -.-> DN["[ RETRY LOOP ]<br/>(GetState + Dep Polling)"]
-        Dep --> Trans
-        
-        Trans["State Transition<br/>(ChangeState)"] -.-> TN["Lifecycle Control<br/>(Client Layer)"]
+        Launch["<b>3. Native Process Spawning</b><br/>(POSIX fork/exec)"]
+        Launch --> Dep["<b>4. Dependency & State Polling</b><br/>(Wait for ACTIVE)"]
+        Dep --> Trans["<b>5. Initial State Transition</b><br/>(Target Lifecycle State)"]
     end
     
-    Path --> Ready("[ SYSTEM READY ]")
+    Exec --> Launch
+    Trans --> Ready("[ SYSTEM READY ]")
 
     style Path fill:#e6e6e6,stroke:#333,stroke-width:2px
     style Start fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000
     style Ready fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
-    style YN fill:none,stroke:none
-    style EN fill:none,stroke:none
-    style CN fill:none,stroke:none
-    style LN fill:none,stroke:none
-    style DN fill:none,stroke:none
-    style TN fill:none,stroke:none
-    
     style YAML fill:#fff,stroke:#333,stroke-width:2px
     style Exec fill:#fff,stroke:#333,stroke-width:2px
-    style Check fill:#fff,stroke:#333,stroke-width:2px
     style Launch fill:#fff,stroke:#333,stroke-width:2px
     style Dep fill:#fff,stroke:#333,stroke-width:2px
     style Trans fill:#fff,stroke:#333,stroke-width:2px
@@ -393,7 +382,7 @@ A side-by-side boot comparison video (Python launch vs LifecycleManager) is incl
 **1. Build:**
 Use `colcon` to build the orchestration packages in your standard workspace.
 ```bash
-colcon build --packages-select lifecycle_manager_msgs lifecycle_manager
+colcon build --packages-select lifecycle_manager_msgs lifecycle_manager_service
 ```
 
 **2. Deploy:**
@@ -404,12 +393,12 @@ You can launch the manager using the provided launch file (recommended) or run t
 
 **Option A: Using the launch file (Recommended)**
 ```bash
-ros2 launch lifecycle_manager lifecycle_manager.launch.py
+ros2 launch lifecycle_manager_service lifecycle_manager.launch.py
 ```
 
 **Option B: Direct execution with custom parameters**
 ```bash
-ros2 run lifecycle_manager lifecycle_manager --ros-args --params-file ./your_config.yaml
+ros2 run lifecycle_manager_service lifecycle_manager --ros-args --params-file ./your_config.yaml
 ```
 
 ---
