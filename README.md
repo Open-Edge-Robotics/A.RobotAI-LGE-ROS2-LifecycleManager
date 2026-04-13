@@ -267,46 +267,64 @@ In other words, boot time becomes bounded by the longest dependency chain rather
 
 ```mermaid
 flowchart TD
-    Start("[ SYSTEM STARTUP ]") --> YAML
+    Start["<b>[ SYSTEM STARTUP ]</b>"] --> YAML
     
-    subgraph MainFlow [" "]
+    subgraph S1 [" "]
+        direction LR
+        YAML["YAML Configuration<br/>(Source of Truth)"] --- YAML_D["Orchestration Manifest<br/>(Packages, Nodes, Deps)"]
+    end
+    
+    YAML --> Exec
+    
+    subgraph S2 [" "]
+        direction LR
+        Exec["Execution Strategy<br/>(Parallel vs Seq)"] --- Exec_D["Mode Selection<br/>(YAML Configuration)"]
+    end
+    
+    Exec --> Path
+    
+    subgraph Path ["[ ORCHESTRATOR PATH ]<br/>(Parallel Thread / Seq Loop)"]
         direction TB
-        YAML["YAML Configuration<br/>(Source of Truth)"]
-        Exec["Execution Strategy<br/>(Parallel vs Seq)"]
         
-        subgraph Path ["[ ORCHESTRATOR PATH ]<br/>(Parallel Thread / Seq Loop)"]
-            direction TB
-            Check["Check if Enabled<br/>(Package Enable)"]
-            Launch["Package Launch<br/>(fork/exec)"]
-            Dep["Dependency & State Check"]
-            Trans["State Transition<br/>(ChangeState)"]
-            
-            Check --> Launch
-            Launch --> Dep
-            Dep --> Trans
+        subgraph R1 [" "]
+            direction LR
+            Check["Check if Enabled<br/>(Package Enable)"] --- Check_D["Package Enable Flag<br/>(f_packageLaunch)"]
         end
         
-        YAML --> Exec
-        Exec --> Path
+        Check --> Launch
+        
+        subgraph R2 [" "]
+            direction LR
+            Launch["Package Launch<br/>(fork/exec)"] --- Launch_D["Native Execution<br/>(POSIX Layer)"]
+        end
+        
+        Launch --> Dep
+        
+        subgraph R3 [" "]
+            direction LR
+            Dep["Dependency & State Check"] --- Dep_D["[ RETRY LOOP ]<br/>(GetState + Dep Polling)"]
+        end
+        
+        Dep --> Trans
+        
+        subgraph R4 [" "]
+            direction LR
+            Trans["State Transition<br/>(ChangeState)"] --- Trans_D["Lifecycle Control<br/>(Client Layer)"]
+        end
     end
 
-    %% Descriptions on the right
-    YAML_D["Orchestration Manifest<br/>(Packages, Nodes, Deps)"] -.-> YAML
-    Exec_D["Mode Selection<br/>(YAML Configuration)"] -.-> Exec
-    
-    Path_D["Multi-Thread Spawning<br/>or Sequential Execution"] -.-> Path
-    
-    Check_D["Package Enable Flag<br/>(f_packageLaunch)"] -.-> Check
-    Launch_D["Native Execution<br/>(POSIX Layer)"] -.-> Launch
-    Dep_D["[ RETRY LOOP ]<br/>(GetState + Dep Polling)"] -.-> Dep
-    Trans_D["Lifecycle Control<br/>(Client Layer)"] -.-> Trans
+    Path --> Ready["<b>[ SYSTEM READY ]</b>"]
 
-    Path --> Ready("[ SYSTEM READY ]")
-
-    style MainFlow fill:none,stroke:none
-    style Path fill:#e6e6e6,stroke:#333,stroke-width:2px
-    style Start fill:#fff,stroke:none,font-weight:bold
-    style Ready fill:#fff,stroke:none,font-weight:bold
+    style S1 fill:none,stroke:none
+    style S2 fill:none,stroke:none
+    style R1 fill:none,stroke:none
+    style R2 fill:none,stroke:none
+    style R3 fill:none,stroke:none
+    style R4 fill:none,stroke:none
+    
+    style Path fill:#f5f5f5,stroke:#333,stroke-width:2px
+    style Start fill:none,stroke:none
+    style Ready fill:none,stroke:none
     
     style YAML fill:#fff,stroke:#333,stroke-width:2px
     style Exec fill:#fff,stroke:#333,stroke-width:2px
@@ -315,13 +333,12 @@ flowchart TD
     style Dep fill:#fff,stroke:#333,stroke-width:2px
     style Trans fill:#fff,stroke:#333,stroke-width:2px
 
-    style YAML_D fill:none,stroke:none
-    style Exec_D fill:none,stroke:none
-    style Path_D fill:none,stroke:none
-    style Check_D fill:none,stroke:none
-    style Launch_D fill:none,stroke:none
-    style Dep_D fill:none,stroke:none
-    style Trans_D fill:none,stroke:none
+    style YAML_D fill:none,stroke:none,color:#666
+    style Exec_D fill:none,stroke:none,color:#666
+    style Check_D fill:none,stroke:none,color:#666
+    style Launch_D fill:none,stroke:none,color:#666
+    style Dep_D fill:none,stroke:none,color:#666
+    style Trans_D fill:none,stroke:none,color:#666
 ```
 
 ### Startup Sequence (Step-by-Step)
