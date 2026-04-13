@@ -306,7 +306,10 @@ After all nodes reach their initial states, the system enters the operational ph
 
 ## 5. Metrics & Validation - "Validation"
 
-This section validates the impact of Deterministic Lifecycle Manager using measurements collected on real robot hardware under deployment-equivalent conditions. All measurements were performed on identical hardware using the same ROS 2 node set. The evaluation environment closely matches the target production configuration, although the system has not yet been deployed to mass production.
+This section validates the impact of Deterministic Lifecycle Manager using measurements collected on a **pre-production commercial cleaning robot platform publicly showcased at IFA 2025**. 
+
+For evaluation purposes, the product's software stack was ported to ROS 2, system interfaces were redesigned, and the C++ DLM was deployed directly on the target hardware. The goal was realistic system-level evaluation under severe production constraints (CPU limitations, memory pressure, and real boot-time behavior). All measurements were performed on identical hardware using the same ROS 2 node set.
+
 
 ### 🧪 Test Environment
 | ITEM | Specification |
