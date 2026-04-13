@@ -123,9 +123,9 @@ flowchart TD
         direction TB
         SL["Service Layer<br/>(Queue Manager)"]
         Conf["Configuration<br/>(YAML Parser)"]
-        Core["Orchestration Core<br/>(Coordinates Launcher & Transition Engine)"]
-        NL["Node Launcher<br/>(fork/exec/SIGCHLD/Deps)"]
-        TE["Transition Engine<br/>((State Machine & Health Logic))"]
+        Core["Orchestration Core<br/>(Coordinates Launcher & Engine)"]
+        NL["Node Launcher<br/>(fork/exec/SIGCHLD)"]
+        TE["Transition Engine<br/>(State Machine Logic)"]
         LC["Lifecycle Client<br/>(Service Interface)"]
         
         SL --> Core
@@ -142,25 +142,25 @@ flowchart TD
         NN["Node N"]
     end
 
-    App -- "ROS 2 Service (/lifecycle_transition_device)" --> SL
+    App -- "ROS 2 Service" --> SL
     YAML --> Conf
     
-    NL -- "Native Execution &<br/>Signal Handling" --> Nodes
-    LC -- "ROS 2 standard<br/>GetState / ChangeState" --> Nodes
+    NL -- "Native Execution" --> Nodes
+    LC -- "Get/ChangeState" --> Nodes
 
-    style App fill:#f9f9f9,stroke:#333,stroke-width:2px
-    style Manager fill:#e6e6e6,stroke:#333,stroke-width:2px
-    style Nodes fill:#e6e6e6,stroke:#333,stroke-width:2px
-    style SL fill:#fff,stroke:#333
-    style Conf fill:#fff,stroke:#333
-    style Core fill:#fff,stroke:#333
-    style TE fill:#fff,stroke:#333
-    style NL fill:#fff,stroke:#333
-    style LC fill:#fff,stroke:#333
-    style YAML fill:#fff,stroke:#333,stroke-width:2px
-    style NA fill:#fff,stroke:#333
-    style NB fill:#fff,stroke:#333
-    style NN fill:#fff,stroke:#333
+    style App fill:#f8f9fa,stroke:#343a40,stroke-width:2px
+    style Manager fill:#f8f9fa,stroke:#343a40,stroke-width:2px
+    style Nodes fill:#f8f9fa,stroke:#343a40,stroke-width:2px
+    style SL fill:#fff,stroke:#343a40
+    style Conf fill:#fff,stroke:#343a40
+    style Core fill:#fff,stroke:#343a40
+    style TE fill:#fff,stroke:#343a40
+    style NL fill:#fff,stroke:#343a40
+    style LC fill:#fff,stroke:#343a40
+    style YAML fill:#fff,stroke:#343a40,stroke-width:2px
+    style NA fill:#fff,stroke:#343a40
+    style NB fill:#fff,stroke:#343a40
+    style NN fill:#fff,stroke:#343a40
 ```
 
 *   **Service Layer** – Exposes the `/lifecycle_transition_device` ROS 2 service and manages a thread-safe work queue. It supports string-based state transition requests (e.g., "NORMAL", "SLEEP") for improved human readability and CLI usability.
@@ -267,78 +267,31 @@ In other words, boot time becomes bounded by the longest dependency chain rather
 
 ```mermaid
 flowchart TD
-    Start["<b>[ SYSTEM STARTUP ]</b>"] --> YAML
+    Start("[ SYSTEM STARTUP ]") --> YAML
     
-    subgraph S1 [" "]
-        direction LR
-        YAML["YAML Configuration<br/>(Source of Truth)"] --- YAML_D["Orchestration Manifest<br/>(Packages, Nodes, Deps)"]
-    end
+    YAML["<b>YAML Configuration</b><br/>(Source of Truth)"] --> Exec
+    Exec["<b>Execution Strategy</b><br/>(Parallel vs Sequential)"] --> Path
     
-    YAML --> Exec
-    
-    subgraph S2 [" "]
-        direction LR
-        Exec["Execution Strategy<br/>(Parallel vs Seq)"] --- Exec_D["Mode Selection<br/>(YAML Configuration)"]
-    end
-    
-    Exec --> Path
-    
-    subgraph Path ["[ ORCHESTRATOR PATH ]<br/>(Parallel Thread / Seq Loop)"]
+    subgraph Path ["[ ORCHESTRATOR PATH ]  -  (Parallel / Seq Loop)"]
         direction TB
-        
-        subgraph R1 [" "]
-            direction LR
-            Check["Check if Enabled<br/>(Package Enable)"] --- Check_D["Package Enable Flag<br/>(f_packageLaunch)"]
-        end
-        
-        Check --> Launch
-        
-        subgraph R2 [" "]
-            direction LR
-            Launch["Package Launch<br/>(fork/exec)"] --- Launch_D["Native Execution<br/>(POSIX Layer)"]
-        end
-        
-        Launch --> Dep
-        
-        subgraph R3 [" "]
-            direction LR
-            Dep["Dependency & State Check"] --- Dep_D["[ RETRY LOOP ]<br/>(GetState + Dep Polling)"]
-        end
-        
-        Dep --> Trans
-        
-        subgraph R4 [" "]
-            direction LR
-            Trans["State Transition<br/>(ChangeState)"] --- Trans_D["Lifecycle Control<br/>(Client Layer)"]
-        end
+        Check["<b>Check if Enabled</b><br/>(f_packageLaunch flag)"] --> Launch
+        Launch["<b>Package Launch</b><br/>(Native fork/exec)"] --> Dep
+        Dep["<b>Dependency & State Check</b><br/>(GetState + Dep Polling)"] --> Trans
+        Trans["<b>State Transition</b><br/>(ChangeState Client)"]
     end
-
-    Path --> Ready["<b>[ SYSTEM READY ]</b>"]
-
-    style S1 fill:none,stroke:none
-    style S2 fill:none,stroke:none
-    style R1 fill:none,stroke:none
-    style R2 fill:none,stroke:none
-    style R3 fill:none,stroke:none
-    style R4 fill:none,stroke:none
     
-    style Path fill:#f5f5f5,stroke:#333,stroke-width:2px
-    style Start fill:none,stroke:none
-    style Ready fill:none,stroke:none
-    
-    style YAML fill:#fff,stroke:#333,stroke-width:2px
-    style Exec fill:#fff,stroke:#333,stroke-width:2px
-    style Check fill:#fff,stroke:#333,stroke-width:2px
-    style Launch fill:#fff,stroke:#333,stroke-width:2px
-    style Dep fill:#fff,stroke:#333,stroke-width:2px
-    style Trans fill:#fff,stroke:#333,stroke-width:2px
+    Path --> Ready("[ SYSTEM READY ]")
 
-    style YAML_D fill:none,stroke:none,color:#666
-    style Exec_D fill:none,stroke:none,color:#666
-    style Check_D fill:none,stroke:none,color:#666
-    style Launch_D fill:none,stroke:none,color:#666
-    style Dep_D fill:none,stroke:none,color:#666
-    style Trans_D fill:none,stroke:none,color:#666
+    style Path fill:#f8f9fa,stroke:#343a40,stroke-width:2px,stroke-dasharray: 5 5
+    style Start fill:#e7f3ff,stroke:#007bff,stroke-width:2px
+    style Ready fill:#d4edda,stroke:#28a745,stroke-width:2px
+    
+    style YAML fill:#fff,stroke:#343a40,stroke-width:1px
+    style Exec fill:#fff,stroke:#343a40,stroke-width:1px
+    style Check fill:#fff,stroke:#343a40,stroke-width:1px
+    style Launch fill:#fff,stroke:#343a40,stroke-width:1px
+    style Dep fill:#fff,stroke:#343a40,stroke-width:1px
+    style Trans fill:#fff,stroke:#343a40,stroke-width:1px
 ```
 
 ### Startup Sequence (Step-by-Step)
