@@ -122,17 +122,17 @@ flowchart TD
     subgraph Manager ["LIFECYCLE MANAGER (Native C++)"]
         direction TB
         SL["Service Layer<br/>(Queue Manager)"]
-        Conf["Config Engine<br/>(Modern YAML Parser)"]
-        TE["Transition Engine<br/>(State-machine Orchestrator)"]
-        NL["Node Launcher<br/>(POSIX Process Manager)"]
-        LC["Lifecycle Client<br/>(Health Monitor & ROS Interface)"]
-        Utils["Lifecycle Utils<br/>(Core Helper Functions)"]
+        Conf["Configuration<br/>(YAML Parser)"]
+        Core["Orchestration Core<br/>(Coordinates Launcher & Transition Engine)"]
+        NL["Node Launcher<br/>(fork/exec/SIGCHLD/Deps)"]
+        TE["Transition Engine<br/>((State Machine & Health Logic))"]
+        LC["Lifecycle Client<br/>(Service Interface)"]
         
-        SL --- TE
-        Conf --- TE
-        TE --- NL
-        TE --- LC
-        Utils --- TE
+        SL --> Core
+        Conf --> Core
+        Core --> NL
+        Core --> TE
+        TE --> LC
     end
 
     subgraph Nodes ["MANAGED ROS 2 NODES"]
@@ -142,10 +142,10 @@ flowchart TD
         NN["Node N"]
     end
 
-    App -- "ROS 2 Service<br/>(/lifecycle_transition_device)" --> SL
+    App -- "ROS 2 Service (/lifecycle_transition_device)" --> SL
     YAML --> Conf
     
-    NL -- "OS Signals (SIGCHLD)<br/>& Native Execution" --> Nodes
+    NL -- "Native Execution &<br/>Signal Handling" --> Nodes
     LC -- "ROS 2 standard<br/>GetState / ChangeState" --> Nodes
 
     style App fill:#f9f9f9,stroke:#333,stroke-width:2px
@@ -153,10 +153,10 @@ flowchart TD
     style Nodes fill:#e6e6e6,stroke:#333,stroke-width:2px
     style SL fill:#fff,stroke:#333
     style Conf fill:#fff,stroke:#333
+    style Core fill:#fff,stroke:#333
     style TE fill:#fff,stroke:#333
     style NL fill:#fff,stroke:#333
     style LC fill:#fff,stroke:#333
-    style Utils fill:#fff,stroke:#333
     style YAML fill:#fff,stroke:#333,stroke-width:2px
     style NA fill:#fff,stroke:#333
     style NB fill:#fff,stroke:#333
@@ -267,27 +267,61 @@ In other words, boot time becomes bounded by the longest dependency chain rather
 
 ```mermaid
 flowchart TD
-    Start("[ SYSTEM STARTUP ]") --> YAML["<b>1. Load YAML Configuration</b><br/>(Source of Truth)"]
-    YAML --> Exec["<b>2. Select Execution Strategy</b><br/>(Parallel vs Sequential)"]
+    Start("[ SYSTEM STARTUP ]") --> YAML
     
-    subgraph Path ["[ ORCHESTRATOR PATH ]"]
+    subgraph MainFlow [" "]
         direction TB
-        Launch["<b>3. Native Process Spawning</b><br/>(POSIX fork/exec)"]
-        Launch --> Dep["<b>4. Dependency & State Polling</b><br/>(Wait for ACTIVE)"]
-        Dep --> Trans["<b>5. Initial State Transition</b><br/>(Target Lifecycle State)"]
+        YAML["YAML Configuration<br/>(Source of Truth)"]
+        Exec["Execution Strategy<br/>(Parallel vs Seq)"]
+        
+        subgraph Path ["[ ORCHESTRATOR PATH ]<br/>(Parallel Thread / Seq Loop)"]
+            direction TB
+            Check["Check if Enabled<br/>(Package Enable)"]
+            Launch["Package Launch<br/>(fork/exec)"]
+            Dep["Dependency & State Check"]
+            Trans["State Transition<br/>(ChangeState)"]
+            
+            Check --> Launch
+            Launch --> Dep
+            Dep --> Trans
+        end
+        
+        YAML --> Exec
+        Exec --> Path
     end
-    
-    Exec --> Launch
-    Trans --> Ready("[ SYSTEM READY ]")
 
+    %% Descriptions on the right
+    YAML_D["Orchestration Manifest<br/>(Packages, Nodes, Deps)"] -.-> YAML
+    Exec_D["Mode Selection<br/>(YAML Configuration)"] -.-> Exec
+    
+    Path_D["Multi-Thread Spawning<br/>or Sequential Execution"] -.-> Path
+    
+    Check_D["Package Enable Flag<br/>(f_packageLaunch)"] -.-> Check
+    Launch_D["Native Execution<br/>(POSIX Layer)"] -.-> Launch
+    Dep_D["[ RETRY LOOP ]<br/>(GetState + Dep Polling)"] -.-> Dep
+    Trans_D["Lifecycle Control<br/>(Client Layer)"] -.-> Trans
+
+    Path --> Ready("[ SYSTEM READY ]")
+
+    style MainFlow fill:none,stroke:none
     style Path fill:#e6e6e6,stroke:#333,stroke-width:2px
-    style Start fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000
-    style Ready fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style Start fill:#fff,stroke:none,font-weight:bold
+    style Ready fill:#fff,stroke:none,font-weight:bold
+    
     style YAML fill:#fff,stroke:#333,stroke-width:2px
     style Exec fill:#fff,stroke:#333,stroke-width:2px
+    style Check fill:#fff,stroke:#333,stroke-width:2px
     style Launch fill:#fff,stroke:#333,stroke-width:2px
     style Dep fill:#fff,stroke:#333,stroke-width:2px
     style Trans fill:#fff,stroke:#333,stroke-width:2px
+
+    style YAML_D fill:none,stroke:none
+    style Exec_D fill:none,stroke:none
+    style Path_D fill:none,stroke:none
+    style Check_D fill:none,stroke:none
+    style Launch_D fill:none,stroke:none
+    style Dep_D fill:none,stroke:none
+    style Trans_D fill:none,stroke:none
 ```
 
 ### Startup Sequence (Step-by-Step)
