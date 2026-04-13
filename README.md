@@ -1,6 +1,12 @@
 # A.RobotAI-LGE-ROS2-LifecycleManager
 A C++ deterministic lifecycle orchestrator optimized for ROS 2 embedded systems.
 >
+> ⚡ 82% faster boot time on real robot hardware  
+> 💾 50% lower RAM usage vs `ros2 launch`  
+> 🧠 Deterministic ROS 2 lifecycle orchestration in C++
+
+Validated on a commercial robot platform (IFA 2025 showcase).
+
 ## 🚀 Performance Summary
 
 - Boot time: **31s → 5s** (**-82%**)
