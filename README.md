@@ -2,17 +2,17 @@
 A C++ deterministic lifecycle orchestrator optimized for ROS 2 embedded systems.
 >
 ## 🚀 Key Results
-> ⚡ 82% faster boot time on real robot hardware  
-> 💾 50% lower RAM usage vs `ros2 launch`  
+> ⚡ 81% faster boot time on real robot hardware  
+> 💾 39% lower RAM usage vs `ros2 launch` (Stable)  
 > 🧠 Deterministic ROS 2 lifecycle orchestration in C++
 
 Validated on a commercial robot platform (IFA 2025 showcase).
 
 ## Performance Summary
 
-- Boot time: **31s → 5s** (**-82%**)
-- RAM usage: **305MB → 156MB** (**~50% reduction**)
-- CPU usage: **60% → 40%**
+- Boot time: **60.0s → 11.2s** (**-81%**)
+- RAM usage (Stable): **442MB → 271MB** (**~39% reduction**)
+- Peak RAM during boot: **229MB → 201MB**
 
 📌 Tested on low-end embedded SoCs (e.g., 1GB RAM, Cortex-A35/A53)
 
@@ -80,6 +80,7 @@ Key characteristics include:
 * **Zero Python dependency** on the target system
 * ROS 2 nodes built and executed as native C++ binaries
 * **Fast and Safe Concurrent Spawning:** Utilizes C++ threads alongside standard POSIX primitives (`fork()`, `execvp()`, `SIGCHLD`) to achieve parallel execution suited for resource-constrained systems.
+*   **Dual-Launch "Benchmark Mode":** Supports toggling between native C++ spawning and legacy script-based execution (`std::system()`) to allow direct A/B performance comparisons (e.g., Python vs. C++ native).
 This design preserves existing ROS 2 components—including DDS communication and lifecycle semantics—while eliminating the runtime overhead introduced by Python-based launch tooling.
 > **💡 Note:** Deterministic Lifecycle Manager is *not* a replacement for ROS 2. It is a focused orchestration layer that provides deterministic and resource-efficient boot and lifecycle management, specifically tailored for low-end embedded systems used in cost-constrained production robots.
 
@@ -167,6 +168,7 @@ flowchart TD
 *   **Config Engine** – A centralized YAML parser that serves as the single source of truth. It supports professional name-based device state definitions, removing the need for fragile numeric indexing.
 *   **Transition Engine** – The central orchestrator that coordinates complex lifecycle state machines across multiple packages. It implements the serialization of state transition requests to prevent race conditions during concurrent updates.
 *   **Node Launcher** – Handles native process spawning via POSIX `fork`/`exec` and monitors child process health using `SIGCHLD`. It manages dynamic path resolution and per-process log redirection.
+    *   **Benchmarking Mode:** Includes a specialized execution path for legacy `.py`/`.sh` launch scripts (via `system()`), enabling deterministic A/B testing against standard Python launches.
 *   **Lifecycle Client** – Interfaces with managed nodes using standard ROS 2 `GetState` and `ChangeState` services, featuring robust retry mechanisms and health monitoring.
 
 **Architecture Independence** – By relying exclusively on POSIX standard system calls (`fork`, `execvp`, `sigaction`) and standard ROS 2 APIs, the Manager achieves 100% portability between ARM64 and x86_64 architectures. This ensures consistent behavioral deterministic across all development and deployment platforms.
@@ -218,7 +220,7 @@ PACKAGE_slam_package:
 ```
 
 Key configuration capabilities:
-*   **Launch mode:** Selects between native binary spawning or script-based execution
+*   **Launch mode (`use_launch_script`):** Selects between native binary spawning (default/performance) or script-based execution (benchmarking)
 *   **Transition strategy:** Parallel (multi-threaded) or sequential execution
 *   **Dependency declaration:** Inter-node startup ordering
 *   **Device state mapping:** Per-node lifecycle targets for each robot mission state
@@ -334,26 +336,40 @@ Two boot configurations were evaluated:
 
 ### 📈 Results
 The measured results are summarized in the data below.
-*   Boot completion time was reduced from **31.0s to 5.67s**, corresponding to an **81.7% reduction**.
-*   Peak memory usage during startup decreased from **305.0MB to 156.3MB**, corresponding to a **48.7% reduction**.
-*   **CPU contention spikes** observed during early boot in the baseline configuration were completely eliminated.
+
+#### TABLE I. STARTUP PERFORMANCE COMPARISON
+| Metric | Python-based launch | C++ DLM (Proposed) |
+| :--- | :---: | :---: |
+| Boot time (s) | 59.96 ± 0.70 | 11.20 ± 0.68 |
+| Avg RAM during boot (MB) | 228.95 ± 1.80 | 201.28 ± 8.59 |
+| Stable RAM 5 s after boot (MB) | 441.97 ± 1.41 | 270.86 ± 1.83 |
+> *Values are averaged over ten repeated runs (Mean ± Std. Dev.).*
+
+*   Boot completion time was reduced from **59.96s to 11.20s**, corresponding to an **81.3% reduction**.
+*   Stable memory usage after startup decreased from **441.97MB to 270.86MB**, corresponding to a **38.7% reduction**.
+*   **CPU contention spikes** observed during early boot in the baseline configuration were significantly minimized.
 
 #### 📊 Performance Charts
 
-> 💡 **<img width="2046" height="621" alt="image" src="https://github.com/user-attachments/assets/afbaf7e0-cb5e-44cc-975f-44b138b0ce5d" />
-**
+<p align="center">
+  <img src="assets/demo_sequential_python.gif" width="48%" />
+  <img src="assets/demo_parallel_native.gif" width="48%" />
+</p>
+<p align="center">
+  <em>Left: Legacy Sequential Python Launch | Right: Proposed Parallel Native C++ DLM</em>
+</p>
 
 #### 📋 Chart Data Summary
 
 *   **⏱️ Execution Time Comparison (Boot Speed)**
-    *   Python Launch: `31.00s`
-    *   Binary (C++): `5.67s`
-    *   **Improvement: ↓ 81.7%** `(31.00s ➔ 5.67s)`
+    *   Python Launch: `59.96s`
+    *   Binary (C++): `11.20s`
+    *   **Improvement: ↓ 81.3%** `(59.96s ➔ 11.20s)`
     
-*   **💾 Peak Memory Usage Comparison (RAM)**
-    *   Python Launch: `305.00MB`
-    *   Binary (C++): `156.33MB`
-    *   **Improvement: ↓ 48.7%** `(305.00MB ➔ 156.33MB)`
+*   **💾 Stable Memory Usage Comparison (RAM)**
+    *   Python Launch: `441.97MB`
+    *   Binary (C++): `270.86MB`
+    *   **Improvement: ↓ 38.7%** `(441.97MB ➔ 270.86MB)`
 
 ## 🧪 Reproducibility
 
@@ -365,9 +381,10 @@ All experiments were conducted on identical hardware and software configurations
 
 Detailed configuration and setup are available in this repository.
 
-## 🎬 Demo
+A side-by-side boot comparison (Legacy Python vs. Native C++ DLM) is shown in the Performance Charts section above. 
 
-A side-by-side boot comparison video (Python launch vs LifecycleManager) is included in the presentation.
+> **💡 Benchmark Reproducibility:**  
+> The 82% performance gain was verified using the built-in **Benchmark Mode**. By toggling the `use_launch_script` flag in the same LifecycleManager instance, we compared identical node sets launched via Python scripts vs. direct C++ native spawning, ensuring the improvement is attributed solely to the orchestration overhead reduction.
 
 > **Conclusion:** By removing Python from the runtime path, memory pressure during system startup was reduced enough to **completely eliminate OOM events** observed in the baseline configuration. These improvements were achieved without modifying the ROS 2 nodes themselves, and resulted in a stable and repeatable boot sequence on the target hardware.
 
