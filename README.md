@@ -351,10 +351,10 @@ The measured results are summarized in the data below.
 
 #### 📊 Performance Charts
 
-<p align="center">
-  <img src="assets/demo_sequential_python.mp4" width="48%">
-  <img src="assets/demo_parallel_native.mp4" width="48%">
-</p>
+| Legacy Sequential Python Launch | Proposed Parallel Native C++ DLM |
+| :---: | :---: |
+| ![Sequential](https://raw.githubusercontent.com/Open-Edge-Robotics/A.RobotAI-LGE-ROS2-LifecycleManager/main/assets/demo_sequential_python.mp4) | ![Parallel](https://raw.githubusercontent.com/Open-Edge-Robotics/A.RobotAI-LGE-ROS2-LifecycleManager/main/assets/demo_parallel_native.mp4) |
+
 <p align="center">
   <em>Left: Legacy Sequential Python Launch | Right: Proposed Parallel Native C++ DLM</em>
 </p>
