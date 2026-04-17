@@ -353,7 +353,7 @@ The measured results are summarized in the data below.
 
 | Legacy Sequential Python Launch | Proposed Parallel Native C++ DLM |
 | :---: | :---: |
-| ![Sequential](https://raw.githubusercontent.com/Open-Edge-Robotics/A.RobotAI-LGE-ROS2-LifecycleManager/main/assets/demo_sequential_python.mp4) | ![Parallel](https://raw.githubusercontent.com/Open-Edge-Robotics/A.RobotAI-LGE-ROS2-LifecycleManager/main/assets/demo_parallel_native.mp4) |
+| ![Sequential](assets/demo_sequential_python.gif) | ![Parallel](assets/demo_parallel_native.gif) |
 
 <p align="center">
   <em>Left: Legacy Sequential Python Launch | Right: Proposed Parallel Native C++ DLM</em>
