@@ -352,8 +352,8 @@ The measured results are summarized in the data below.
 #### 📊 Performance Charts
 
 <p align="center">
-  <video src="assets/demo_sequential_python.mp4" width="48%" controls></video>
-  <video src="assets/demo_parallel_native.mp4" width="48%" controls></video>
+  <img src="assets/demo_sequential_python.mp4" width="48%">
+  <img src="assets/demo_parallel_native.mp4" width="48%">
 </p>
 <p align="center">
   <em>Left: Legacy Sequential Python Launch | Right: Proposed Parallel Native C++ DLM</em>
