@@ -69,7 +69,6 @@ The target systems are cost-constrained commercial robotic platforms built on en
 During system integration and production‑equivalent platform evaluation, we repeatedly encountered critical issues when using the standard Python‑based `ros2 launch` workflow on resource‑constrained hardware.
 The most common problems were:
 * High baseline RAM usage before application logic starts
-* Large CPU spikes during parallel node startup
 * Frequent OOM (Out Of Memory) kills during early boot
 * Unstable and non-deterministic startup sequences in production images
 These issues were consistently reproducible across multiple low-end SoCs and robot products. They could not be resolved in a reliable way through parameter tuning, launch configuration changes, or partial optimization. 
@@ -91,9 +90,8 @@ This section explains why the standard Python‑based `ros2 launch` workflow bec
 `ros2 launch` relies on Python processes that are loaded and initialized during system boot.
 * On low‑end platforms with limited CPU performance and less than 1 GB of RAM, this introduces **substantial overhead before any application logic starts**.
 * As the number of nodes increases, Python interpreter initialization and runtime management consume a significant portion of system resources, frequently leading to **memory pressure and OOM (Out Of Memory) events during early boot**.
-#### 2.2 Non‑Deterministic Startup Under CPU Contention
-* On entry‑level CPUs (such as Cortex‑A35‑class cores), parallel startup of multiple Python processes causes **severe CPU contention** during boot.
-* Although `ros2 launch` supports parallel spawning, it does not enforce strict OS‑level startup ordering or readiness guarantees.
+#### 2.2 Non‑Deterministic Startup
+* Although `ros2 launch` supports concurrent spawning, it does not enforce strict OS‑level startup ordering or readiness guarantees.
 * As a result, dependent nodes may start before prerequisite nodes are fully initialized, leading to **race conditions and unstable boot behavior** in production environments.
 #### 2.3 Fragmented Lifecycle Control After Launch
 The launch system focuses on process creation and parameter loading.
@@ -183,7 +181,7 @@ flowchart TD
         P_Launch -- "1. High-Overhead Launch" --> P_N1[ROS 2 Node Process A]
         P_Launch -- "2. High-Overhead Launch" --> P_N2[ROS 2 Node Process B]
         P_Launch -- "3. High-Overhead Launch" --> P_N3[ROS 2 Node Process C]
-        P_Note["🚨 Sequential Bottleneck, CPU Spikes & OOM"] -.-> P_Launch
+        P_Note["🚨 Sequential Bottleneck & OOM"] -.-> P_Launch
     end
 
     subgraph New [✅ After: C++ Lifecycle Manager]
@@ -347,7 +345,6 @@ The measured results are summarized in the data below.
 
 *   Boot completion time was reduced from **59.96s to 11.20s**, corresponding to an **81.3% reduction**.
 *   Stable memory usage after startup decreased from **441.97MB to 270.86MB**, corresponding to a **38.7% reduction**.
-*   **CPU contention spikes** observed during early boot in the baseline configuration were significantly minimized.
 
 #### 📊 Performance Charts
 
