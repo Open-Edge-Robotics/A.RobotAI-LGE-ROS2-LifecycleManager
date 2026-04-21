@@ -64,7 +64,7 @@ This project demonstrates that ROS 2 can be:
 ---
 ## 1. Overview - "What & Why?"
 This document introduces the **"Deterministic Lifecycle Manager"**, a C++‑based lifecycle orchestration service designed to run ROS 2 reliably on low‑end embedded robotic platforms.
-The target systems are cost-constrained commercial robotic platforms built on entry-level SoCs such as **Rockchip PX30, LG DQ1**, or other Cortex-A35-class CPUs, typically equipped with **less than 1GB of RAM**. On these platforms, boot-time behavior and peak resource usage critically impact system stability.
+The target systems are cost-constrained commercial robotic platforms built on entry-level SoCs such as **Rockchip PX30, LG DQ1**, or other Cortex-A35-class architectures, typically equipped with **less than 1GB of RAM**. On these platforms, boot-time behavior and peak resource usage critically impact system stability.
 ### 🔴 Motivation
 During system integration and production‑equivalent platform evaluation, we repeatedly encountered critical issues when using the standard Python‑based `ros2 launch` workflow on resource‑constrained hardware.
 The most common problems were:
@@ -72,7 +72,7 @@ The most common problems were:
 * Frequent OOM (Out Of Memory) kills during early boot
 * Unstable and non-deterministic startup sequences in production images
 These issues were consistently reproducible across multiple low-end SoCs and robot products. They could not be resolved in a reliable way through parameter tuning, launch configuration changes, or partial optimization. 
-**Our conclusion** was that the problems originated from the runtime overhead and process model of the Python-based launch system itself, which does not scale well under tight CPU and memory constraints.
+**Our conclusion** was that the problems originated from the runtime overhead and process model of the Python-based launch system itself, which does not scale well under tight memory constraints.
 ### 🟢 Design Approach
 To address these limitations, we implemented the **Deterministic Lifecycle Manager** as a minimal, native C++ service that launches and supervises ROS 2 nodes directly as OS-level processes.
 Key characteristics include:
@@ -88,7 +88,7 @@ This design preserves existing ROS 2 components—including DDS communication an
 This section explains why the standard Python‑based `ros2 launch` workflow becomes a reliability bottleneck on low‑end SoCs, based on issues repeatedly observed during production‑equivalent system integration.
 #### 2.1 Excessive Runtime Overhead During Boot
 `ros2 launch` relies on Python processes that are loaded and initialized during system boot.
-* On low‑end platforms with limited CPU performance and less than 1 GB of RAM, this introduces **substantial overhead before any application logic starts**.
+* On low-cost hardware with 1 GB or less of RAM, this introduces **substantial overhead before any application logic starts**.
 * As the number of nodes increases, Python interpreter initialization and runtime management consume a significant portion of system resources, frequently leading to **memory pressure and OOM (Out Of Memory) events during early boot**.
 #### 2.2 Non‑Deterministic Startup
 * Although `ros2 launch` supports concurrent spawning, it does not enforce strict OS‑level startup ordering or readiness guarantees.
@@ -309,7 +309,7 @@ After all nodes reach their initial states, the system enters the operational ph
 
 This section validates the impact of Deterministic Lifecycle Manager using measurements collected on a **pre-production commercial cleaning robot platform publicly showcased at IFA 2025**. 
 
-For evaluation purposes, the product's software stack was ported to ROS 2, system interfaces were redesigned, and the C++ DLM was deployed directly on the target hardware. The goal was realistic system-level evaluation under severe production constraints (CPU limitations, memory pressure, and real boot-time behavior). All measurements were performed on identical hardware using the same ROS 2 node set.
+For evaluation purposes, the product's software stack was ported to ROS 2, system interfaces were redesigned, and the C++ DLM was deployed directly on the target hardware. The goal was realistic system-level evaluation under severe production constraints (memory pressure and strict boot-time requirements). All measurements were performed on identical hardware using the same ROS 2 node set.
 
 
 ### 🧪 Test Environment
