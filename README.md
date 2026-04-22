@@ -394,28 +394,19 @@ A side-by-side boot comparison (Legacy Python vs. Native C++ DLM) is shown in th
 
 ---
 
-### 🛠️ Build Instructions
 
-**1. Build:**
-Use `colcon` to build the orchestration packages in your standard workspace.
-```bash
-colcon build --packages-select lifecycle_manager_msgs lifecycle_manager
-```
+# 🛠️ Build / Run Status
 
-**2. Deploy:**
-Push (copy) the resulting build artifacts (binaries and libraries) to your target robot system or staging environment.
+The full implementation is not yet publicly available in this repository.
 
-**3. Run:**
-You can launch the manager using the provided launch file (recommended) or run the binary directly with your custom configuration.
+Build and run instructions will be added once the source release is completed.
 
-**Option A: Using the launch file (Recommended)**
-```bash
-ros2 launch lifecycle_manager lifecycle_manager.launch.py
-```
+Currently available in this repository:
+- architecture documentation
+- YAML configuration examples
+- measurement methodology
+- empirical validation results
 
-**Option B: Direct execution with custom parameters**
-```bash
-ros2 run lifecycle_manager lifecycle_manager --ros-args --params-file ./your_config.yaml
 ```
 
 ---
