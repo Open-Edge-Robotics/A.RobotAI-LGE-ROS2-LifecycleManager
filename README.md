@@ -2,8 +2,8 @@
 A C++ lifecycle orchestration layer for ROS 2 on resource-constrained embedded systems.
 >
 ## 🚀 Key Results
-> ⚡ 81% faster boot time on real robot hardware  
-> 💾 39% lower RAM usage vs `ros2 launch` (Stable)  
+> ⚡ 81.3% faster boot time on real robot hardware  
+> 💾 38.7% lower RAM usage vs `ros2 launch` (Stable)  
 > 🧠 Deterministic ROS 2 lifecycle orchestration in C++
 
 Validated on a commercial robot platform (IFA 2025 showcase).
@@ -109,7 +109,11 @@ The Lifecycle Manager is a multi-threaded C++ ROS 2 node that acts as a centrali
 *   **Spin Thread:** Dedicated to handling ROS 2 communications and service callbacks.
 *   **Main Thread:** Manages the core orchestration loop, including package spawning and the `processQueue()` mechanism. This non-blocking queue ensures that state transition requests are serialized and processed deterministically.
 
-It operates as a ROS 2-native orchestration component within a standard ROS 2 system, while avoiding dependence on the Python-based launch path in the evaluated deployment mode and is structured around five core modules:
+
+It operates as a ROS 2-native orchestration component within a standard ROS 2 system, while avoiding dependence on the Python-based launch path in the evaluated deployment mode.
+
+The system is structured around five core modules:
+
 
 ```mermaid
 flowchart TD
@@ -395,7 +399,7 @@ A side-by-side boot comparison (Legacy Python vs. Native C++ DLM) is shown in th
 ---
 
 
-# 🛠️ Build / Run Status
+### 🛠️ Build / Run Status
 
 The full implementation is not yet publicly available in this repository.
 
