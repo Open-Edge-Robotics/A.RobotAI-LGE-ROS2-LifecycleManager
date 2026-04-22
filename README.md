@@ -10,8 +10,8 @@ Validated on a commercial robot platform (IFA 2025 showcase).
 
 ## Performance Summary
 
-- Boot time: **60.0s → 11.2s** (**-81%**)
-- RAM usage (Stable): **442MB → 271MB** (**~39% reduction**)
+- Boot time: **60.0s → 11.2s** (**-81.3%**)
+- RAM usage (Stable): **442MB → 271MB** (**~38.7% reduction**)
 - Peak RAM during boot: **229MB → 201MB**
 
 📌 Tested on low-end embedded SoCs (e.g., 1GB RAM, Cortex-A35/A53)
@@ -27,7 +27,7 @@ ROS 2 can remain challenging to deploy on low-cost embedded robots when memory b
 
 This project demonstrates that ROS 2 can be:
 - deployed on 1GB-class hardware
-- booted deterministically
+- booted with deterministic lifecycle coordination
 - used in real production environments
 
 ## ⚖️ Comparison
