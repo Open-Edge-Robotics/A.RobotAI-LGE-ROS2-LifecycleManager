@@ -20,7 +20,7 @@ Validated on a commercial robot platform (IFA 2025 showcase).
 
 📌 Measurements are based on lifecycle activation logs and system-level monitoring (htop) under identical workloads.
 
-👉 suggesting a practical deployment path for ROS 2 on hardware that is often considered too constrained for full-stack execution..
+👉 These results suggest a practical deployment path for ROS 2 on highly constrained embedded hardware.
 
 ## 🎯 Why this matters
 ROS 2 is powerful, but still too heavy for low-cost embedded robots.
@@ -43,16 +43,13 @@ This project demonstrates that ROS 2 can be:
 
 > 🚧 **[NOTICE] Project Status**
 >
-> This repository provides architectural documentation, YAML-based configuration
-> examples, and empirical validation results for the Deterministic Lifecycle Manager.
+> This repository currently provides architecture documentation, YAML configuration examples,
+> measurement methodology, and empirical validation results for the Deterministic Lifecycle Manager.
 >
-> The execution model, lifecycle semantics, dependency resolution strategy, and
-> performance characteristics are fully documented here to allow technical review
-> and reproduction of system behavior.
+> These materials are intended to make the design and observed system behavior technically reviewable
+> before the full implementation is publicly released.
 >
-> This repository currently provides architecture documentation, configuration examples, and empirical
-> validation results. A partial or full source release under Apache License 2.0 is being prepared through
-> internal compliance review.
+> A partial or full source release under Apache License 2.0 is being prepared through internal compliance review.
 
 ## 📑 Table of Contents
 1. [Overview - "What & Why?"](#1-overview---what--why)
