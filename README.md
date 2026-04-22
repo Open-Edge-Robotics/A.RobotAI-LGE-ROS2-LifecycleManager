@@ -98,8 +98,9 @@ The launch system focuses on process creation and parameter loading.
 ROS 2 lifecycle states are intentionally minimal and low‑level, while production robots operate in mission‑level modes such as standby or navigation.
 * Without centralized orchestration, mapping mission‑level behavior to coordinated lifecycle transitions across multiple nodes becomes **error‑prone and difficult to validate**, especially on low‑end SoCs where deterministic behavior is critical.
 > **💡 Summary**  
-> On low‑end embedded platforms, the Python‑based launch system introduces overhead and non‑determinism during boot and state transitions. **In our evaluated setup, these limitations were not sufficiently mitigated through launch configuration alone.**, motivating a native and deterministic lifecycle orchestration approach.
-
+> On low‑end embedded platforms, the Python‑based launch system introduces overhead and non‑determinism during boot and state transitions.
+> **In our evaluated setup, these limitations were not sufficiently mitigated through launch configuration alone.**
+> This motivated a native and deterministic lifecycle orchestration approach.
 ## 3. Architecture & LifecycleManager - "Solution"
 
 ### A Modular Solution for Complex Systems
