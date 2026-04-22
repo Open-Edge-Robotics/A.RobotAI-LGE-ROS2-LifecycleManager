@@ -1,5 +1,5 @@
 # A.RobotAI-LGE-ROS2-LifecycleManager
-A C++ deterministic lifecycle orchestrator optimized for ROS 2 embedded systems.
+A C++ lifecycle orchestration layer for ROS 2 on resource-constrained embedded systems.
 >
 ## 🚀 Key Results
 > ⚡ 81% faster boot time on real robot hardware  
@@ -20,7 +20,7 @@ Validated on a commercial robot platform (IFA 2025 showcase).
 
 📌 Measurements are based on lifecycle activation logs and system-level monitoring (htop) under identical workloads.
 
-👉 Enables ROS 2 deployment on hardware previously considered infeasible for full-stack execution.
+👉 suggesting a practical deployment path for ROS 2 on hardware that is often considered too constrained for full-stack execution..
 
 ## 🎯 Why this matters
 ROS 2 is powerful, but still too heavy for low-cost embedded robots.
@@ -50,9 +50,9 @@ This project demonstrates that ROS 2 can be:
 > performance characteristics are fully documented here to allow technical review
 > and reproduction of system behavior.
 >
-> The complete C++ source code is planned to be released under the Apache License 2.0
-> following internal compliance procedures.
-
+> This repository currently provides architecture documentation, configuration examples, and empirical
+> validation results. A partial or full source release under Apache License 2.0 is being prepared through
+> internal compliance review.
 
 ## 📑 Table of Contents
 1. [Overview - "What & Why?"](#1-overview---what--why)
@@ -71,19 +71,19 @@ The most common problems were:
 * High baseline RAM usage before application logic starts
 * Frequent OOM (Out Of Memory) kills during early boot
 * Unstable and non-deterministic startup sequences in production images
-These issues were consistently reproducible across multiple low-end SoCs and robot products. They could not be resolved in a reliable way through parameter tuning, launch configuration changes, or partial optimization. 
-**Our conclusion** was that the problems originated from the runtime overhead and process model of the Python-based launch system itself, which does not scale well under tight memory constraints.
+Similar issues were repeatedly observed during evaluation on multiple low-end platforms, with the detailed quantitative results in this repository collected on the LG DQ1-based test platform. In our evaluated configuration, these issues were not sufficiently resolved through parameter tuning, launch configuration changes, or partial optimization.
+**Our working conclusion** was that orchestration overhead in the evaluated Python-based launch path was a major contributor under tight memory constraints.
 ### 🟢 Design Approach
 To address these limitations, we implemented the **Deterministic Lifecycle Manager** as a minimal, native C++ service that launches and supervises ROS 2 nodes directly as OS-level processes.
 Key characteristics include:
-* **Zero Python dependency** on the target system
+* **No Python-based launch dependency** on the target system
 * ROS 2 nodes built and executed as native C++ binaries
-* **Fast and Safe Concurrent Spawning:** Utilizes C++ threads alongside standard POSIX primitives (`fork()`, `execvp()`, `SIGCHLD`) to achieve parallel execution suited for resource-constrained systems.
+* **Concurrent native spawning with dependency-aware coordination:** Utilizes C++ threads alongside standard POSIX primitives (`fork()`, `execvp()`, `SIGCHLD`) to achieve parallel execution suited for resource-constrained systems.
 *   **Dual-Launch "Benchmark Mode":** Supports toggling between native C++ spawning and legacy script-based execution (`std::system()`) to allow direct A/B performance comparisons (e.g., Python vs. C++ native).
-This design preserves existing ROS 2 components—including DDS communication and lifecycle semantics—while eliminating the runtime overhead introduced by Python-based launch tooling.
+This design preserves standard ROS 2 lifecycle semantics and DDS-based communication while reducing the runtime overhead associated with the evaluated Python-based launch path.
 > **💡 Note:** Deterministic Lifecycle Manager is *not* a replacement for ROS 2. It is a focused orchestration layer that provides deterministic and resource-efficient boot and lifecycle management, specifically tailored for low-end embedded systems used in cost-constrained production robots.
 
-## 2. Why Python launch breaks on low-end SoCs - "Pain Point"
+## 2. Limitations of Python-based launch on low-end SoCs in our evaluated setup - "Pain Point"
 ### Structural Pain Points in Production Systems
 This section explains why the standard Python‑based `ros2 launch` workflow becomes a reliability bottleneck on low‑end SoCs, based on issues repeatedly observed during production‑equivalent system integration.
 #### 2.1 Excessive Runtime Overhead During Boot
@@ -101,7 +101,7 @@ The launch system focuses on process creation and parameter loading.
 ROS 2 lifecycle states are intentionally minimal and low‑level, while production robots operate in mission‑level modes such as standby or navigation.
 * Without centralized orchestration, mapping mission‑level behavior to coordinated lifecycle transitions across multiple nodes becomes **error‑prone and difficult to validate**, especially on low‑end SoCs where deterministic behavior is critical.
 > **💡 Summary**  
-> On low‑end embedded platforms, the Python‑based launch system introduces overhead and non‑determinism during boot and state transitions. **These limitations are structural and cannot be reliably mitigated through launch configuration alone**, motivating a native and deterministic lifecycle orchestration approach.
+> On low‑end embedded platforms, the Python‑based launch system introduces overhead and non‑determinism during boot and state transitions. **In our evaluated setup, these limitations were not sufficiently mitigated through launch configuration alone.**, motivating a native and deterministic lifecycle orchestration approach.
 
 ## 3. Architecture & LifecycleManager - "Solution"
 
@@ -169,7 +169,7 @@ flowchart TD
     *   **Benchmarking Mode:** Includes a specialized execution path for legacy `.py`/`.sh` launch scripts (via `system()`), enabling deterministic A/B testing against standard Python launches.
 *   **Lifecycle Client** – Interfaces with managed nodes using standard ROS 2 `GetState` and `ChangeState` services, featuring robust retry mechanisms and health monitoring.
 
-**Architecture Independence** – By relying exclusively on POSIX standard system calls (`fork`, `execvp`, `sigaction`) and standard ROS 2 APIs, the Manager achieves 100% portability between ARM64 and x86_64 architectures. This ensures consistent behavioral deterministic across all development and deployment platforms.
+**Architecture Independence** – By relying exclusively on POSIX standard system calls (`fork`, `execvp`, `sigaction`) and standard ROS 2 APIs, the Manager is designed to be portable across common Linux targets such as ARM64 and x86_64, subject to standard ROS 2 and platform integration constraints. This helps maintain consistent orchestration behavior across development and deployment platforms.
 
 ### 📊 Architecture Comparison
 The following diagram illustrates the fundamental architectural shift from a heavy Python interpreter to our lightweight C++ native orchestrator.
@@ -381,9 +381,9 @@ Detailed configuration and setup are available in this repository.
 A side-by-side boot comparison (Legacy Python vs. Native C++ DLM) is shown in the Performance Charts section above. 
 
 > **💡 Benchmark Reproducibility:**  
-> The 82% performance gain was verified using the built-in **Benchmark Mode**. By toggling the `use_launch_script` flag in the same LifecycleManager instance, we compared identical node sets launched via Python scripts vs. direct C++ native spawning, ensuring the improvement is attributed solely to the orchestration overhead reduction.
+> The 82% performance gain was verified using the built-in **Benchmark Mode**. By toggling the `use_launch_script` flag in the same LifecycleManager instance, we compared identical node sets launched via Python scripts vs. direct C++ native spawning, supporting the interpretation that a large portion of the improvement is attributable to orchestration-path differences.
 
-> **Conclusion:** By removing Python from the runtime path, memory pressure during system startup was reduced enough to **completely eliminate OOM events** observed in the baseline configuration. These improvements were achieved without modifying the ROS 2 nodes themselves, and resulted in a stable and repeatable boot sequence on the target hardware.
+> **Conclusion:** By removing Python from the runtime path, memory pressure during system startup was reduced enough to **OOM events**observed in the baseline configuration were not reproduced in the evaluated DLM. These improvements were achieved without modifying the ROS 2 nodes themselves, and resulted in a stable and repeatable boot sequence on the target hardware.
 
 ## 6. Source, Build & License
 
