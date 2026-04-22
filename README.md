@@ -53,11 +53,11 @@ This project demonstrates that ROS 2 can be:
 
 ## 📑 Table of Contents
 1. [Overview - "What & Why?"](#1-overview---what--why)
-2. [Structural Pain Points in Production Systems - "Pain Point"](#2-structural-pain-points-in-production-systems)
-3. [Architecture & LifecycleManager - "Solution"](#3-architecture--lifecyclemanager)
-4. [Deterministic Boot Flow - "Deep-dive"](#4-deterministic-boot-flow-deep-dive)
-5. [Metrics & Validation - "Validation"](#5-metrics--validation)
-6. [Source, Build & License - "Open-Source Status"](#6-source-build--license)
+2. [Structural Pain Points in Production Systems - "Pain Point"](#2-structural-pain-points-in-production-systems---pain-point)
+3. [Architecture & LifecycleManager - "Solution"](#3-architecture--lifecyclemanager---solution)
+4. [Deterministic Boot Flow - "Deep-dive"](#4-deterministic-boot-flow---deep-dive)
+5. [Metrics & Validation - "Validation"](#5-metrics--validation---validation)
+6. [Source, Build & License - "Open-Source Status"](#6-source-build--license---open-source-status)
 ---
 ## 1. Overview - "What & Why?"
 This document introduces the **"Deterministic Lifecycle Manager"**, a C++‑based lifecycle orchestration service designed to run ROS 2 reliably on low‑end embedded robotic platforms.
@@ -80,7 +80,7 @@ Key characteristics include:
 This design preserves standard ROS 2 lifecycle semantics and DDS-based communication while reducing the runtime overhead associated with the evaluated Python-based launch path.
 > **💡 Note:** Deterministic Lifecycle Manager is *not* a replacement for ROS 2. It is a focused orchestration layer that provides deterministic and resource-efficient boot and lifecycle management, specifically tailored for low-end embedded systems used in cost-constrained production robots.
 
-## 2. Limitations of Python-based launch on low-end SoCs in our evaluated setup - "Pain Point"
+## 2. Structural Pain Points in Production Systems - "Pain Point"
 ### Structural Pain Points in Production Systems
 This section explains why the standard Python‑based `ros2 launch` workflow becomes a reliability bottleneck on low‑end SoCs, based on issues repeatedly observed during production‑equivalent system integration.
 #### 2.1 Excessive Runtime Overhead During Boot
@@ -253,7 +253,7 @@ ros2 service call /lifecycle_transition_device lifecycle_manager_msgs/srv/Transi
 
 This single call automatically transitions each node to its matching target state — navigation and motor stop, while camera and diagnostics stay running. This design completely decouples mission logic from lifecycle management.
 
-## 4. Deterministic Boot Flow (how it works) - "Deep-dive"
+## 4. Deterministic Boot Flow - "Deep-dive"
 
 ### Technical Logic from Initialization to Operation
 The Lifecycle Manager follows a rigorous, deterministic sequence to ensure all nodes are prepared and synchronized.
@@ -382,7 +382,7 @@ A side-by-side boot comparison (Legacy Python vs. Native C++ DLM) is shown in th
 
 > **Conclusion:** By removing Python from the evaluated runtime path, startup memory pressure was reduced, and OOM events observed in the baseline configuration were not reproduced in the evaluated DLM configuration. These improvements were achieved without modifying the ROS 2 nodes themselves and resulted in a stable and repeatable boot sequence on the target hardware.
 
-## 6. Source, Build & License
+## 6. Source, Build & License - "Open-Source Status"
 
 ### ⚙️ Technical Requirements
 *   **Architecture:** `x86_64` (Development/PC) and `ARM64/AArch64` (Embedded Target)
