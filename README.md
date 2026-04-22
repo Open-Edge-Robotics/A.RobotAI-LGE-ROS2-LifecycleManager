@@ -383,7 +383,7 @@ Detailed configuration and setup are available in this repository.
 A side-by-side boot comparison (Legacy Python vs. Native C++ DLM) is shown in the Performance Charts section above. 
 
 > **💡 Benchmark Reproducibility:**  
-> The 82% performance gain was verified using the built-in **Benchmark Mode**. By toggling the `use_launch_script` flag in the same LifecycleManager instance, we compared identical node sets launched via Python scripts vs. direct C++ native spawning, supporting the interpretation that a large portion of the improvement is attributable to orchestration-path differences.
+> The 81.3% performance gain was verified using the built-in **Benchmark Mode**. By toggling the `use_launch_script` flag in the same LifecycleManager instance, we compared identical node sets launched via Python scripts vs. direct C++ native spawning, supporting the interpretation that a large portion of the improvement is attributable to orchestration-path differences.
 
 > **Conclusion:** By removing Python from the evaluated runtime path, startup memory pressure was reduced, and OOM events observed in the baseline configuration were not reproduced in the evaluated DLM configuration. These improvements were achieved without modifying the ROS 2 nodes themselves and resulted in a stable and repeatable boot sequence on the target hardware.
 
@@ -410,8 +410,6 @@ Currently available in this repository:
 - YAML configuration examples
 - measurement methodology
 - empirical validation results
-
-```
 
 ---
 
