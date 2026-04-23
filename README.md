@@ -75,7 +75,7 @@ To address these limitations, we implemented the **Deterministic Lifecycle Manag
 Key characteristics include:
 * **No Python-based launch dependency** on the target system
 * ROS 2 nodes built and executed as native C++ binaries
-* **Concurrent native spawning with dependency-aware coordination:** Utilizes C++ threads alongside standard POSIX primitives (`fork()`, `execvp()`, `SIGCHLD`) to achieve parallel execution suited for resource-constrained systems.
+* **Hardware-Aware Concurrent Spawning:** Utilizes C++ threads alongside standard POSIX primitives (`fork()`, `execvp()`, `SIGCHLD`) to balance parallel execution. By throttling simultaneous process launches based on system hardware concurrency (CPU cores), it mitigates excessive CPU contention and OS scheduler overhead to ensure system stability.
 *   **Dual-Launch "Benchmark Mode":** Supports toggling between native C++ spawning and legacy script-based execution (`std::system()`) to allow direct A/B performance comparisons (e.g., Python vs. C++ native).
 This design preserves standard ROS 2 lifecycle semantics and DDS-based communication while reducing the runtime overhead associated with the evaluated Python-based launch path.
 > **💡 Note:** Deterministic Lifecycle Manager is *not* a replacement for ROS 2. It is a focused orchestration layer that provides deterministic and resource-efficient boot and lifecycle management, specifically tailored for low-end embedded systems used in cost-constrained production robots.
@@ -209,21 +209,28 @@ All orchestration behavior is defined declaratively in a single YAML file:
 # Example: Configuration with Professional State Names
 LIFECYCLE_MANAGER_CONFIG:
   DEVICE_STATE_NAMES: ["NORMAL", "SLEEP", "POWERSAVE"]
+  USE_LAUNCH_SCRIPT: false
+  NODE_TRANSITION_STRATEGY: "parallel"
 
 PACKAGE_slam_package:
   PACKAGE_ENABLE: true
   NODE_slam_node:
     EXECUTABLE: slam_node
+    ARGUMENT: ["--param_a", "value_a"]
     DEPENDENCY: ["lidar_package,lidar_node"]
+    DEVICE_INIT: ACTIVE
     DEVICE_STATE_NORMAL: ACTIVE
     DEVICE_STATE_SLEEP: INACTIVE
+    DEVICE_STATE_POWERSAVE: FINALIZED
 ```
 
 Key configuration capabilities:
-*   **Launch mode (`use_launch_script`):** Selects between native binary spawning (default/performance) or script-based execution (benchmarking)
-*   **Transition strategy:** Parallel (multi-threaded) or sequential execution
-*   **Dependency declaration:** Inter-node startup ordering
-*   **Device state mapping:** Per-node lifecycle targets for each robot mission state
+*   **Launch mode (`USE_LAUNCH_SCRIPT`):** Selects between native binary spawning (fork/exec) or script-based execution (benchmarking)
+*   **Transition strategy (`NODE_TRANSITION_STRATEGY`):** Parallel (multi-threaded) or sequential execution
+*   **Executable arguments (`ARGUMENT`):** Command-line arguments for the native process
+*   **Dependency declaration (`DEPENDENCY`):** Inter-node startup ordering and readiness polling
+*   **Initialization target (`DEVICE_INIT`):** Specific lifecycle state for initial boot
+*   **Device state mapping (`DEVICE_STATE_<NAME>`):** Per-node lifecycle targets for each robot mission state
 
 ### 🔁 Multi-Step Lifecycle State Machine
 The ROS 2 lifecycle standard does not allow direct transitions between certain primary states. The Lifecycle Manager resolves all intermediate steps automatically:
@@ -263,7 +270,7 @@ This single call automatically transitions each node to its matching target stat
 ### Technical Logic from Initialization to Operation
 The Lifecycle Manager follows a rigorous, deterministic sequence to ensure all nodes are prepared and synchronized.
 
-By identifying independent node groups at runtime from YAML dependency declarations (e.g., `DEPENDENCY: ["pkg_name,node_name"]`), the system initializes multiple packages concurrently — reducing the theoretical boot time from **`O(N)`** sequential initialization to **`O(Depth(G))`**, where `Depth(G)` is the longest dependency path in the package graph.
+By identifying independent node groups at runtime from YAML dependency declarations (e.g., `DEPENDENCY: ["pkg_name,node_name"]`), the system initializes multiple packages concurrently — optimizing the theoretical boot time from **`O(N)`** sequential initialization to **`O(Depth(G))`**, where `Depth(G)` is the longest dependency path in the package graph.
 In other words, boot time becomes bounded by the longest dependency chain rather than the total number of nodes.
 
 
