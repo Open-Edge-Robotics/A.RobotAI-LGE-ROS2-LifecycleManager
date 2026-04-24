@@ -12,7 +12,7 @@ Validated on a commercial robot platform (IFA 2025 showcase).
 
 - Boot time: **60.0s → 11.2s** (**-81.3%**)
 - RAM usage (Stable): **442MB → 271MB** (**~38.7% reduction**)
-- Peak RAM during boot: **229MB → 201MB**
+- Avg RAM during boot: **229MB → 201MB**
 
 📌 Tested on low-end embedded SoCs (e.g., 1GB RAM, Cortex-A35/A53)
 
