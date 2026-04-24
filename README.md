@@ -328,7 +328,7 @@ For evaluation purposes, the product's software stack was ported to ROS 2, syste
 | **RAM** | 1GB |
 | **eMMC** | 4GB |
 | **ROS 2 Distribution** | ROS 2 Humble |
-| **Managed ROS 2 Nodes** | 12 nodes + lifecycle node |
+| **Managed ROS 2 Nodes** | 14 nodes + lifecycle node |
 | **OS** | Yocto based ROS 2 |
 | **Yocto Version** | Kirkstone |
 
