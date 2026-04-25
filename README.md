@@ -18,7 +18,7 @@ Validated on a commercial robot platform (IFA 2025 showcase).
 
 📌 Boot time is defined as the time from process start until all required nodes reach the **ACTIVE** lifecycle state.
 
-📌 Measurements are based on lifecycle activation logs and system-level monitoring (htop) under identical workloads.
+📌 Measurements are based on lifecycle activation logs and OS-level memory metrics collected under identical workloads.
 
 👉 These results suggest a practical deployment path for ROS 2 on highly constrained embedded hardware.
 
